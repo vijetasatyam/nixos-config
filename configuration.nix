@@ -101,15 +101,27 @@
 
 # User and Accounts.
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.alice = {
-    isNormalUser = true;
-    description = "alice";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [
-    #  thunderbird
-    ];
+  users.users = {
+    alice = {
+      isNormalUser = true;
+      extraGroups = [ 
+        "networkmanager" "wheel" 
+      ];
+
+      packages = with pkgs; [
+      #  thunderbird
+      ];
+    };
   };
+
+  security.sudo.extraRules =[{
+    users = ["alice"];
+
+    commands = [{
+      command = "ALL";
+      options = ["NOPASSWD"];
+    }];
+  }];
 
 
 # Programs and Packages.
