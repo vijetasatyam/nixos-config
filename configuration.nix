@@ -5,14 +5,20 @@
 { config, pkgs, ... }:
 
 {
+
+# Imports.
+
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
     ];
 
-  # Bootloader.
+# Bootloader.
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+# Networking and Firewall.
 
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -23,6 +29,14 @@
 
   # Enable networking
   networking.networkmanager.enable = true;
+
+  # Open ports in the firewall.
+  # networking.firewall.allowedTCPPorts = [ 22 ];
+  # networking.firewall.allowedUDPPorts = [ ... ];
+  # Or disable the firewall altogether.
+  networking.firewall.enable = false;
+
+# Locals.
 
   # Set your time zone.
   time.timeZone = "Asia/Kolkata";
@@ -41,6 +55,13 @@
     LC_TELEPHONE = "en_IN";
     LC_TIME = "en_IN";
   };
+
+# Services.
+
+  # List services that you want to enable:
+
+  # Enable SSH Support.
+  services.openssh.enable = true;
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
@@ -77,6 +98,9 @@
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
+
+# User and Accounts.
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.alice = {
     isNormalUser = true;
@@ -86,6 +110,9 @@
     #  thunderbird
     ];
   };
+
+
+# Programs and Packages.
 
   # Install firefox.
   programs.firefox.enable = true;
@@ -103,6 +130,12 @@
   ];
 
 
+
+
+# Program specific settings and services.
+  
+  # nix-ld
+  programs.nix-ld.enable = true; 
   
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -112,16 +145,11 @@
   #   enableSSHSupport = true;
   # };
 
-  # List services that you want to enable:
 
-  programs.nix-ld.enable = true;
-  services.openssh.enable = true;
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ 22 ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  networking.firewall.enable = false;
+
+
+# Channels.
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
