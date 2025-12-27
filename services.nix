@@ -1,7 +1,7 @@
 {
-  config,
-  pkgs,
-  lib,
+  # config,
+  # pkgs,
+  # lib,
   ...
 }:
 
@@ -9,6 +9,12 @@
   # Services.
 
   # List services that you want to enable:
+
+  # Universal Secret Storage
+  # Necessary for VS Code to save GitHub login tokens.
+  # Works on GNOME and future Window Managers (Hyprland/Sway/i3).
+  services.dbus.enable = true;
+  services.gnome.gnome-keyring.enable = true;
 
   # Enable SSH Support.
   services.openssh.enable = true;
