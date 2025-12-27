@@ -1,30 +1,25 @@
-{ config, ... }:
+{
+  config,
+  ...
+}:
 
 let
-  # Import the unstable channel
   unstable = import <unstable> {
     config = config.nixpkgs.config;
   };
 in
 {
-  environment.systemPackages = with unstable; [
-    # Put all your unstable packages here
-    vscodium
+  environment.systemPackages = [
+    # Obsidian works great from unstable
+    unstable.obsidian
 
-    nix-ld
+    # Recommended: Vesktop instead of Discord for better Wayland support
+    unstable.vesktop
 
-    # lanuage server for .nix file
-    nixd
-    nil
-
-    # You can add more here later, for example:
-    # discord
-    # obsidian
-    # podman
+    # Or, if you prefer the official one:
+    # (unstable.discord.override { withVencord = true; })
   ];
 
-  # Program specific settings and services.
-
-  # nix-ld
-  programs.nix-ld.enable = true;
+  # This variable fixes blurry text and screen sharing for Obsidian/Discord
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
 }

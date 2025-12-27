@@ -3,9 +3,9 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 {
-  config,
-  pkgs,
-  lib,
+  # config,
+  # pkgs,
+  # lib,
   ...
 }:
 
@@ -14,13 +14,14 @@
   # Imports.
 
   imports = [
+    ./development-tools.nix # all development tools ( stable and unstable ).
     ./env-packages.nix # stable packages
     ./git-config.nix # git config
     ./hardware-configuration.nix # hardware scan
     ./networking.nix # networking config
     ./services.nix # all the services
     ./system.nix # all system config
-    ./unstable-packages.nix # unstable packages
+    ./unstable-packages.nix # unstable packages ( general )
     ./users.nix # user config
   ];
 
