@@ -6,9 +6,6 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # Install firefox.
-  programs.firefox.enable = true;
-
   # List packages installed in system profile. To search, run:
 
   # $ nix search wget
@@ -21,6 +18,29 @@
   ];
 
   # Program specific settings and services.
+
+  # Firefox.
+  programs.firefox = {
+
+    enable = true;
+    policies = {
+      DisableTelemetry = true;
+      DisableFirefoxStudies = true;
+      EnableTrackingProtection = {
+        Value = true;
+        Locked = true;
+      };
+    };
+  };
+
+  programs.git = {
+    enable = true;
+    config = {
+      user.name = "vijetasatyam";
+      user.email = "vijetasatyam@gmail.com"; # Must match your Codeberg email
+      init.defaultBranch = "main";
+    };
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
