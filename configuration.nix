@@ -15,7 +15,7 @@
 
   imports = [
     ./env-packages.nix # stable packages
-    ./git-config.nix
+    ./git-config.nix # git config
     ./hardware-configuration.nix # hardware scan
     ./networking.nix # networking config
     ./services.nix # all the services
