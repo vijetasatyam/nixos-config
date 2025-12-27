@@ -28,7 +28,6 @@
   security.sudo.extraRules = [
     {
       users = [ "alice" ];
-
       commands = [
         {
           command = "ALL";

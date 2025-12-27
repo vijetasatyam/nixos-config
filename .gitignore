@@ -1,0 +1,8 @@
+# Ignore Nix build results
+result
+result-*
+
+# Ignore temporary files
+*.swp
+*~
+.direnv/
