@@ -74,4 +74,20 @@ sudo ln -sf ~/nixos-config/configuration.nix /etc/nixos/configuration.nix
 sudo nixos-rebuild switch
 ```
 
+## 📝 TODO
+
+    [ ] Restructure to Folder-wise Hierarchy: Migrate from a flat directory to a nested structure:
+
+        hosts/: Machine-specific configurations (hardware-specific).
+
+        modules/: Reusable logic (e.g., modules/desktop, modules/dev-tools, modules/core).
+
+        scripts/: Custom bash helpers for maintenance.
+
+    [ ] Implement Flakes: Transition to flake.nix for better dependency pinning and reproducibility.
+
+    [ ] Home Manager Integration: Move user-specific dotfiles (VS Code settings, shell aliases) into Home Manager.
+
+
+
 ---
