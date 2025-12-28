@@ -74,9 +74,9 @@ sudo ln -sf ~/nixos-config/configuration.nix /etc/nixos/configuration.nix
 sudo nixos-rebuild switch
 ```
 
-## 📝 TODO
+## **📝 TODO**
 
-    [ ] Restructure to Folder-wise Hierarchy: Migrate from a flat directory to a nested structure:
+    [*] Restructure to Folder-wise Hierarchy: Migrate from a flat directory to a nested structure:
 
         hosts/: Machine-specific configurations (hardware-specific).
 
