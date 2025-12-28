@@ -30,6 +30,9 @@
     # Navigation
     conf = "cd ~/nixos-config";
 
+    # Sync to both Codeberg (origin) and GitHub (github)
+    sync = "git push origin main && git push github main";
+
     # Quick Edit (Adjust 'vim' to 'code' or 'zed' if you prefer)
     edit = "cd ~/nixos-config && vim hosts/nixos/configuration.nix";
 
