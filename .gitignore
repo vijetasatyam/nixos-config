@@ -1,8 +1,23 @@
-# Ignore Nix build results
+# --- Nix Specific ---
 result
 result-*
+.direnv/
+.venv/
 
-# Ignore temporary files
+# --- Editor Specific ---
+.vscode/
+.idea/
 *.swp
 *~
-.direnv/
+*.bak
+
+# --- System/OS Noise ---
+.DS_Store
+Thumbs.db
+lost+found/
+
+# --- Secrets (Safety First) ---
+# Even if you don't have these yet, it's good practice
+*.pem
+*.key
+.env
