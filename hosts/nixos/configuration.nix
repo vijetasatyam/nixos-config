@@ -36,6 +36,6 @@
 
   # Channels.
 
-  system.stateVersion = "25.11"; # Did you read the comment?
+  system.stateVersion = "25.11";
 
 }
