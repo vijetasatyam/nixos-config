@@ -32,6 +32,8 @@ in
       pkgs.direnv
       pkgs.nix-direnv
       pkgs.zed-editor
+      pkgs.devpod
+      pkgs.devpod-desktop
 
       # --- Tools from UNSTABLE ---
       unstable.vscode
