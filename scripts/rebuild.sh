@@ -1,6 +1,5 @@
 #!/bin/bash
-# ❄️ NixOS Ultimate Rebuild Script (v3.2.2)
-# Fixes: Default-to-Yes on Enter, removed du errors, improved GPG TTY
+# Features: Default-to-Yes, Auto-Skip Clean Git, No du errors, GPG TTY fix
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
@@ -60,7 +59,6 @@ echo -e "New System Size:     ${GREEN}$new_size${NC}"
 # --- 4. Activation Prompt (Default: YES) ---
 echo -e "\n"
 read -p "❓ Apply this configuration? [Y/n] " confirm
-# This logic checks if the input is Y, y, OR empty (-z)
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 5. Applying the Switch
@@ -70,25 +68,31 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
     # 6. Git Automation
     gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
 
-    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Committing changes to Git..."
+    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Checking Git status..."
     git add .
 
-    if git commit -S -m "NixOS Rebuild: Generation $gen"; then
-        echo -e "${GREEN}💾 Commit successful.${NC}"
-
-        # 7. Push Confirmation (Default: YES)
-        echo -e "\n"
-        read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
-        if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
-            echo -e "${BLUE}📡 Syncing remotes...${NC}"
-            git push origin main && git push github main
-            echo -e "${GREEN}✅ Remotes updated.${NC}"
-        else
-            echo -e "${YELLOW}⏭️ Push skipped.${NC} Changes saved locally."
-        fi
+    # Check if there are actually changes staged to be committed
+    if git diff --cached --quiet; then
+        echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
     else
-        echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
-        echo -e "${YELLOW}Tip: Try running 'gpg-connect-agent reloadagent /bye' if the prompt didn't appear.${NC}"
+        # Only attempt commit if changes exist
+        if git commit -S -m "NixOS Rebuild: Generation $gen"; then
+            echo -e "${GREEN}💾 Commit successful.${NC}"
+        else
+            echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
+            echo -e "${YELLOW}Tip: Try running 'gpg-connect-agent reloadagent /bye' if the prompt didn't appear.${NC}"
+        fi
+    fi
+
+    # 7. Push Confirmation (Default: YES)
+    echo -e "\n"
+    read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
+    if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
+        echo -e "${BLUE}📡 Syncing remotes...${NC}"
+        git push origin main && git push github main
+        echo -e "${GREEN}✅ Remotes updated.${NC}"
+    else
+        echo -e "${YELLOW}⏭️ Push skipped.${NC}"
     fi
 
     ELAPSED=$(( SECONDS - START_TIME ))
