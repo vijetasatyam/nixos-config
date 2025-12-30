@@ -6,7 +6,6 @@
 
 {
   environment.shellAliases = {
-
     # Open the whole folder in VS Code
     # edit = "code ~/nixos-config";
 
@@ -14,8 +13,10 @@
     # edit = "zed ~/nixos-config";
 
     # System Management
-    rebuild = "sudo nixos-rebuild switch";
-    # Dry run: Checks for syntax errors and builds the config without switching/applying it
+    rebuild = "bash ~/nixos-config/rebuild.sh";
+    revert = "bash ~/nixos-config/revert.sh";
+    clean = "bash ~/nixos-config/clean.sh";
+
     check = "sudo nixos-rebuild dry-activate";
     gen = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
 
@@ -28,16 +29,12 @@
     # Rollback: Quickly switch to the previous working generation
     rollback = "sudo nixos-rebuild switch --rollback";
 
-    # Navigation
+    # Navigation & Git
     conf = "cd ~/nixos-config";
-
-    # Sync to both Codeberg (origin) and GitHub (github)
     sync = "git push origin main && git push github main";
-
-    # Quick Edit
     edit = "cd ~/nixos-config && vim hosts/nixos/configuration.nix";
 
-    # Useful Shortcuts
+    # Shortcuts
     ls = "ls --color=auto";
     ll = "ls -l";
     grep = "grep --color=auto";
