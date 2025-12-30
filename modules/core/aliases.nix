@@ -15,10 +15,11 @@
 
     # System Management
     rebuild = "sudo nixos-rebuild switch";
+    # Dry run: Checks for syntax errors and builds the config without switching/applying it
+    check = "sudo nixos-rebuild dry-activate";
     gen = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
 
     # Garbage Collection & Optimization
-    # This deletes old generations and then deduplicates files to save space
     nix-clean = "sudo nix-collect-garbage -d && sudo nix-store --optimise -v";
 
     # Upgrade: Updates all channels (Stable + Unstable) and then rebuilds
@@ -33,7 +34,7 @@
     # Sync to both Codeberg (origin) and GitHub (github)
     sync = "git push origin main && git push github main";
 
-    # Quick Edit (Adjust 'vim' to 'code' or 'zed' if you prefer)
+    # Quick Edit
     edit = "cd ~/nixos-config && vim hosts/nixos/configuration.nix";
 
     # Useful Shortcuts
