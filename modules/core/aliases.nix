@@ -13,9 +13,9 @@
     # edit = "zed ~/nixos-config";
 
     # System Management
-    rebuild = "bash ~/nixos-config/rebuild.sh";
-    revert = "bash ~/nixos-config/revert.sh";
-    clean = "bash ~/nixos-config/clean.sh";
+    rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
+    revert = "bash ~/nixos-config/scripts/revert.sh";
+    clean = "bash ~/nixos-config/scripts/clean.sh";
 
     check = "sudo nixos-rebuild dry-activate";
     gen = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
