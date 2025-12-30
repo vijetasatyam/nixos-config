@@ -26,14 +26,16 @@ fi
 # --- 2. Building with Error Capture ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
 
-# We use 'tee' to show real-time output while saving to a log for error parsing
-if ! sudo nixos-rebuild build 2>&1 | tee $LOG_FILE; then
+# We capture the exit status of the nixos-rebuild command specifically
+sudo nixos-rebuild build 2>&1 | tee $LOG_FILE
+BUILD_STATUS=${PIPESTATUS[0]} # Captures the status of the first command in the pipe
+
+if [ $BUILD_STATUS -ne 0 ]; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
     echo -e "${YELLOW}Relevant Error Snippet:${NC}"
-    # Looks for 'error:' or 'failed' and shows context
-    grep -iA 5 -iB 5 "error:" $LOG_FILE || tail -n 20 $LOG_FILE
+    grep -i "error:" $LOG_FILE | tail -n 10
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BLUE}💡 Tip: Run 'less /tmp/nixos-build-error.log' to see full log.${NC}"
+    # Stop the script here so we don't commit broken configs
     exit 1
 fi
 
