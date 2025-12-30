@@ -9,8 +9,6 @@
   ...
 }:
 
-
-
 {
   # Imports.
 
@@ -24,10 +22,13 @@
     ../../modules/core/services.nix
     ../../modules/core/users.nix
     ../../modules/core/aliases.nix
+    ../../modules/core/flathub.nix
 
     # --- Development Modules ---
     ../../modules/dev/development-tools.nix
     ../../modules/dev/git-config.nix
+    # ../../modules/dev/containers.nix
+    # ../../modules/dev/virtual-machines.nix
 
     # --- Application Modules ---
     ../../modules/apps/env-packages.nix
