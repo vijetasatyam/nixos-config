@@ -1,6 +1,9 @@
 #!/bin/bash
-# ❄️ NixOS Ultimate Rebuild Script (v3.2)
-# Features: Error Reporting, Triple-Diff, Timer, and Dual-Remote Sync
+# ❄️ NixOS Ultimate Rebuild Script (v3.2.1)
+# Fixes: Removed du permission errors & improved GPG TTY handling
+
+# Ensure GPG can find the terminal for passphrase entry
+export GPG_TTY=$(tty)
 
 # --- Color Definitions ---
 BLUE='\033[1;34m'
@@ -26,16 +29,14 @@ fi
 # --- 2. Building with Error Capture ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
 
-# We capture the exit status of the nixos-rebuild command specifically
 sudo nixos-rebuild build 2>&1 | tee $LOG_FILE
-BUILD_STATUS=${PIPESTATUS[0]} # Captures the status of the first command in the pipe
+BUILD_STATUS=${PIPESTATUS[0]}
 
 if [ $BUILD_STATUS -ne 0 ]; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
     echo -e "${YELLOW}Relevant Error Snippet:${NC}"
     grep -i "error:" $LOG_FILE | tail -n 10
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    # Stop the script here so we don't commit broken configs
     exit 1
 fi
 
@@ -48,16 +49,15 @@ echo -e "${YELLOW}--------------------------------------------------${NC}"
 nvd diff /run/current-system ./result
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
-# B. NIX-DIFF (Corrected color flag)
+# B. NIX-DIFF
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
 nix-diff --color always --environment /run/current-system ./result
 
-# C. CLOSURE SIZE (Fixed command name)
+# C. CLOSURE SIZE (Permission Errors Fixed)
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
-# In newer Nix, the command is 'nix-store --query --references' or similar
-# Let's use a simpler, more universal way:
-old_size=$(du -shL /run/current-system | awk '{print $1}')
-new_size=$(du -shL ./result | awk '{print $1}')
+# 2>/dev/null silences errors for restricted files like /etc/cups/ssl
+old_size=$(du -shL /run/current-system 2>/dev/null | awk '{print $1}')
+new_size=$(du -shL ./result 2>/dev/null | awk '{print $1}')
 echo -e "Current System Size: ${YELLOW}$old_size${NC}"
 echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
@@ -71,13 +71,11 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
     sudo nixos-rebuild switch
 
     # 6. Git Automation
-    # Capture the generation number for the commit message
     gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
 
     echo -e "\n${GREEN}✅ Rebuild successful!${NC} Committing changes to Git..."
     git add .
 
-    # Commit with GPG Signing
     if git commit -S -m "NixOS Rebuild: Generation $gen"; then
         echo -e "${GREEN}💾 Commit successful.${NC}"
 
@@ -93,12 +91,12 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
         fi
     else
         echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
+        echo -e "${YELLOW}Tip: Try running 'gpg-connect-agent reloadagent /bye' if the prompt didn't appear.${NC}"
     fi
 
-    # Calculate Time Elapsed
     ELAPSED=$(( SECONDS - START_TIME ))
     echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Build Time: $((ELAPSED/60))m $((ELAPSED%60))s)${NC}"
 else
     echo -e "${YELLOW}⏹️ Switch cancelled.${NC} No Git commit made."
-    rm ./result  # Clean up the build symlink
+    rm ./result
 fi
