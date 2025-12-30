@@ -46,15 +46,16 @@ echo -e "${YELLOW}--------------------------------------------------${NC}"
 nvd diff /run/current-system ./result
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
-# B. NIX-DIFF (Focused Environment Deep-Dive)
+# B. NIX-DIFF (Corrected color flag)
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-nix-diff --color --environment /run/current-system ./result
+nix-diff --color always --environment /run/current-system ./result
 
-# C. CLOSURE SIZE (Native Nix Tooling)
+# C. CLOSURE SIZE (Fixed command name)
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
-# nix-path-registration gets all dependencies, du calculates size
-old_size=$(nix-path-registration -R /run/current-system | du -shc | tail -n1 | awk '{print $1}')
-new_size=$(nix-path-registration -R ./result | du -shc | tail -n1 | awk '{print $1}')
+# In newer Nix, the command is 'nix-store --query --references' or similar
+# Let's use a simpler, more universal way:
+old_size=$(du -shL /run/current-system | awk '{print $1}')
+new_size=$(du -shL ./result | awk '{print $1}')
 echo -e "Current System Size: ${YELLOW}$old_size${NC}"
 echo -e "New System Size:     ${GREEN}$new_size${NC}"
 

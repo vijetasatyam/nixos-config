@@ -23,8 +23,6 @@
       qemu = {
         package = pkgs.qemu_full;
         runAsRoot = true;
-        ovmf.enable = true;
-        ovmf.packages = [ pkgs.OVMFFull.fd ];
       };
     };
 

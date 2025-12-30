@@ -21,6 +21,7 @@
       enable = true;
       # NOTE: dockerCompat = true creates the 'docker' alias for the podman command.
       # It does NOT conflict with the Docker daemon socket unless 'dockerSocket.enable' is true.
+      dockerSocket.enable = true;
       dockerCompat = true;
       defaultNetwork.settings.dns_enabled = true;
     };
@@ -29,7 +30,7 @@
     # We keep the real Docker daemon enabled for tools that require the actual .sock file.
     # If you want to go "Podman Only" later, set this to false and set
     # virtualisation.podman.dockerSocket.enable = true.
-    virtualisation.docker.enable = true;
+    virtualisation.docker.enable = false;
 
     # --- 3. Container Tools ---
     environment.systemPackages = with pkgs; [
