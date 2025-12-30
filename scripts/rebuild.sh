@@ -1,6 +1,6 @@
 #!/bin/bash
-# ❄️ NixOS Ultimate Rebuild Script (v3.0)
-# Triple-Diff + Error Reporting + Timer
+# ❄️ NixOS Ultimate Rebuild Script (v3.2)
+# Features: Error Reporting, Triple-Diff, Timer, and Dual-Remote Sync
 
 # --- Color Definitions ---
 BLUE='\033[1;34m'
@@ -17,16 +17,23 @@ LOG_FILE="/tmp/nixos-build-error.log"
 echo -e "${BLUE}🚀 Starting Ultimate NixOS Rebuild...${NC}"
 cd ~/nixos-config || exit
 
+# Check for uncommitted changes
+if [[ -n $(git status -s) ]]; then
+    echo -e "${YELLOW}📝 Notice:${NC} You have uncommitted changes in your config folder."
+    git status -s
+fi
+
 # --- 2. Building with Error Capture ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
 
-# We use 'tee' to show you the output in real-time while saving it to a log
+# We use 'tee' to show real-time output while saving to a log for error parsing
 if ! sudo nixos-rebuild build 2>&1 | tee $LOG_FILE; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
     echo -e "${YELLOW}Relevant Error Snippet:${NC}"
-    # Extracts the last 20 lines, looking for 'error:' or 'failed'
-    grep -A 5 -B 5 "error:" $LOG_FILE || tail -n 20 $LOG_FILE
+    # Looks for 'error:' or 'failed' and shows context
+    grep -iA 5 -iB 5 "error:" $LOG_FILE || tail -n 20 $LOG_FILE
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}💡 Tip: Run 'less /tmp/nixos-build-error.log' to see full log.${NC}"
     exit 1
 fi
 
@@ -41,13 +48,15 @@ echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 # B. NIX-DIFF (Focused Environment Deep-Dive)
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-# --environment: shows only changed env vars
-# --color: keeps the terminal pretty
 nix-diff --color --environment /run/current-system ./result
 
-# C. NVDTOOLS (Path & Closure Summary)
-echo -e "\n${CYAN}[3/3] Closure Summary (nvdtools):${NC}"
-nvd-diff /run/current-system ./result
+# C. CLOSURE SIZE (Native Nix Tooling)
+echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
+# nix-path-registration gets all dependencies, du calculates size
+old_size=$(nix-path-registration -R /run/current-system | du -shc | tail -n1 | awk '{print $1}')
+new_size=$(nix-path-registration -R ./result | du -shc | tail -n1 | awk '{print $1}')
+echo -e "Current System Size: ${YELLOW}$old_size${NC}"
+echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
 # --- 4. Activation Prompt ---
 echo -e "\n"
@@ -59,10 +68,13 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
     sudo nixos-rebuild switch
 
     # 6. Git Automation
+    # Capture the generation number for the commit message
     gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
 
-    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Committing changes..."
+    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Committing changes to Git..."
     git add .
+
+    # Commit with GPG Signing
     if git commit -S -m "NixOS Rebuild: Generation $gen"; then
         echo -e "${GREEN}💾 Commit successful.${NC}"
 
@@ -74,15 +86,16 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
             git push origin main && git push github main
             echo -e "${GREEN}✅ Remotes updated.${NC}"
         else
-            echo -e "${YELLOW}⏭️ Push skipped.${NC}"
+            echo -e "${YELLOW}⏭️ Push skipped.${NC} Changes saved locally."
         fi
     else
-        echo -e "${RED}⚠️ Commit failed (Check GPG).${NC}"
+        echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
     fi
 
+    # Calculate Time Elapsed
     ELAPSED=$(( SECONDS - START_TIME ))
-    echo -e "\n${GREEN}✨ DONE! Generation $gen active. (Time: $((ELAPSED/60))m $((ELAPSED%60))s)${NC}"
+    echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Build Time: $((ELAPSED/60))m $((ELAPSED%60))s)${NC}"
 else
-    echo -e "${YELLOW}⏹️ Switch cancelled.${NC}"
-    rm ./result
+    echo -e "${YELLOW}⏹️ Switch cancelled.${NC} No Git commit made."
+    rm ./result  # Clean up the build symlink
 fi
