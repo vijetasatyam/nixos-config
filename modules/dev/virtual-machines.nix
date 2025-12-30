@@ -39,7 +39,6 @@
       gnome-boxes
       freerdp
       remmina
-      # winboat
     ];
 
     # --- 4. User Permissions ---
