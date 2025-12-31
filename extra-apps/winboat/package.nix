@@ -15,6 +15,7 @@
   makeDesktopItem,
   copyDesktopItems,
   nix-update-script,
+  hicolor-icon-theme
 }:
 
 buildNpmPackage (final: {
@@ -37,6 +38,7 @@ buildNpmPackage (final: {
     zip
     makeWrapper
     copyDesktopItems
+    hicolor-icon-theme
   ];
 
   buildInputs = [ udev ];

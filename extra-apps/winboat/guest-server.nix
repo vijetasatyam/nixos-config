@@ -12,6 +12,7 @@ buildGoModule {
   env = {
     GOOS = "windows";
     GOARCH = "amd64";
+    CGO_ENABLED = "0";
     PACKAGE = "winboat-server";
   };
 
@@ -19,7 +20,7 @@ buildGoModule {
     "-s"
     "-w"
     "-X main.Version=${winboat.version}"
-    "-X main.CommitHash=${winboat.src.rev}"
+    "-X main.CommitHash=${winboat.version}"
   ];
 
   meta = {
