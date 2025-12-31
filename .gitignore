@@ -11,6 +11,10 @@ result-*
 *~
 *.bak
 
+# --- test and apps ---
+test/
+test/*
+
 # --- System/OS Noise ---
 .DS_Store
 Thumbs.db

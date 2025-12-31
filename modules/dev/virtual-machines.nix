@@ -6,7 +6,10 @@
 }:
 
 {
-  imports = [ ./containers.nix ];
+  imports = [
+    ./containers.nix
+    ./winboat.nix
+  ];
 
   options.modules.core.virtualisation = {
     enable = lib.mkOption {
