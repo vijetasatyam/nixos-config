@@ -1,5 +1,5 @@
 #!/bin/bash
-# Features: Default-to-Yes, Auto-Skip Clean Git, No du errors, GPG TTY fix
+# Features: Default-to-Yes, Auto-Skip Clean Git, Smart Push Detection, No du errors, GPG TTY fix
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
@@ -71,11 +71,10 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
     echo -e "\n${GREEN}✅ Rebuild successful!${NC} Checking Git status..."
     git add .
 
-    # Check if there are actually changes staged to be committed
+    # Check for staged changes
     if git diff --cached --quiet; then
         echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
     else
-        # Only attempt commit if changes exist
         if git commit -S -m "NixOS Rebuild: Generation $gen"; then
             echo -e "${GREEN}💾 Commit successful.${NC}"
         else
@@ -84,15 +83,28 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
         fi
     fi
 
-    # 7. Push Confirmation (Default: YES)
-    echo -e "\n"
-    read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
-    if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
-        echo -e "${BLUE}📡 Syncing remotes...${NC}"
-        git push origin main && git push github main
-        echo -e "${GREEN}✅ Remotes updated.${NC}"
+    # --- 7. Smart Push Detection ---
+    # Sync remote info without downloading objects
+    git fetch --quiet origin main &
+    git fetch --quiet github main &
+    wait
+
+    # Count commits ahead of remotes
+    AHEAD_ORIGIN=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
+    AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
+
+    if [ "$AHEAD_ORIGIN" -eq 0 ] && [ "$AHEAD_GITHUB" -eq 0 ]; then
+        echo -e "\n${GREEN}☁️ Remotes are already up to date.${NC}"
     else
-        echo -e "${YELLOW}⏭️ Push skipped.${NC}"
+        echo -e "\n${YELLOW}📡 You are ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
+        read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
+        if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
+            echo -e "${BLUE}📡 Syncing remotes...${NC}"
+            git push origin main && git push github main
+            echo -e "${GREEN}✅ Remotes updated.${NC}"
+        else
+            echo -e "${YELLOW}⏭️ Push skipped.${NC}"
+        fi
     fi
 
     ELAPSED=$(( SECONDS - START_TIME ))
