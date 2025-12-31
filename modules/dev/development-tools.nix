@@ -12,6 +12,10 @@ let
   };
 in
 {
+  # Import the isolated vscode module
+  imports = [
+    ./vscode.nix
+  ];
   # 1. Define the Option
   options = {
     modules.dev.tools = {
@@ -36,7 +40,7 @@ in
       pkgs.devpod-desktop
 
       # --- Tools from UNSTABLE ---
-      unstable.vscode
+      # unstable.vscode
       unstable.nixd
       unstable.nil
       unstable.nix-ld
