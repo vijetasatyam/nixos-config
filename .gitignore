@@ -14,6 +14,8 @@ result-*
 # --- test and apps ---
 test/
 test/*
+test*
+test-*
 
 # --- System/OS Noise ---
 .DS_Store
