@@ -16,13 +16,17 @@
     # --- Machine Specific ---
     ./hardware-configuration.nix
 
+    # --- Application Modules ---
+    ../../modules/apps/env-packages.nix
+    ../../modules/apps/unstable-packages.nix
+
     # --- Core Modules ---
-    ../../modules/core/system.nix
-    ../../modules/core/networking.nix
-    ../../modules/core/services.nix
-    ../../modules/core/users.nix
     ../../modules/core/aliases.nix
     ../../modules/core/flathub.nix
+    ../../modules/core/networking.nix
+    ../../modules/core/services.nix
+    ../../modules/core/system.nix
+    ../../modules/core/users.nix
     ../../modules/core/vmware.nix
 
     # --- Development Modules ---
@@ -30,9 +34,6 @@
     ../../modules/dev/git-config.nix
     ../../modules/dev/virtual-machines.nix
 
-    # --- Application Modules ---
-    ../../modules/apps/env-packages.nix
-    ../../modules/apps/unstable-packages.nix
   ];
 
 modules.vmware.enable = true;
