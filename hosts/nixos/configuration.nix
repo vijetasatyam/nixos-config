@@ -23,6 +23,7 @@
     ../../modules/core/users.nix
     ../../modules/core/aliases.nix
     ../../modules/core/flathub.nix
+    ../../modules/core/vmware.nix
 
     # --- Development Modules ---
     ../../modules/dev/development-tools.nix
@@ -33,6 +34,8 @@
     ../../modules/apps/env-packages.nix
     ../../modules/apps/unstable-packages.nix
   ];
+
+modules.vmware.enable = true;
 
   # Channels.
 
