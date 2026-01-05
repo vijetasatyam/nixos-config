@@ -16,37 +16,98 @@
 
   config = lib.mkIf config.modules.core.containers.enable {
 
-    # --- 1. Podman (Primary CLI) ---
-    virtualisation.podman = {
+    # --- 1. Real Docker (System-wide Daemon) ---
+    virtualisation.docker = {
       enable = true;
-      # NOTE: dockerCompat = true creates the 'docker' alias for the podman command.
-      # It does NOT conflict with the Docker daemon socket unless 'dockerSocket.enable' is true.
-      dockerSocket.enable = true;
-      dockerCompat = true;
-      defaultNetwork.settings.dns_enabled = true;
+      # This provides the traditional /var/run/docker.sock
     };
 
-    # --- 2. Docker (Backend Daemon) ---
-    # We keep the real Docker daemon enabled for tools that require the actual .sock file.
-    # If you want to go "Podman Only" later, set this to false and set
-    # virtualisation.podman.dockerSocket.enable = true.
-    virtualisation.docker.enable = false;
+    # --- 2. Podman (Rootless/User-local) ---
+    virtualisation.podman = {
+      enable = true;
+      # We turn OFF compatibility so 'docker' refers to the real Docker binary,
+      # and 'podman' refers to the podman binary. No confusion.
+      dockerCompat = false;
+      # This enables the rootless socket for your specific user.
+      dockerSocket.enable = false;
+    };
 
     # --- 3. Container Tools ---
     environment.systemPackages = with pkgs; [
       distrobox
       podman-compose
       docker-compose
-      pods # Native GTK Podman manager
+      pods
     ];
 
-    # --- 4. System Settings ---
-    virtualisation.containers.enable = true;
+    # --- 4. The "Engine Switcher" Logic ---
+    # This sets up the default behavior and gives you easy commands to swap
+    environment.extraInit = ''
+    # Set default DOCKER_HOST to Podman's rootless socket
+    # We use a check to ensure XDG_RUNTIME_DIR is set (usually is on login)
+      if [ -n "$XDG_RUNTIME_DIR" ]; then
+        export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
+      fi
+    '';
 
-    # Add user to groups
+    # --- 5. System Permissions ---
+    virtualisation.containers.enable = true;
     users.users.alice.extraGroups = [
-      "podman"
-      "docker"
+      "docker" # Required for real Docker
+      "podman" # Required for Podman
     ];
   };
 }
+
+# {
+#   config,
+#   pkgs,
+#   lib,
+#   ...
+# }:
+
+# {
+#   options.modules.core.containers = {
+#     enable = lib.mkOption {
+#       type = lib.types.bool;
+#       default = true;
+#       description = "Enable container runtimes (Podman, Docker, Distrobox)";
+#     };
+#   };
+
+#   config = lib.mkIf config.modules.core.containers.enable {
+
+#     # --- 1. Podman (Primary CLI) ---
+#     virtualisation.podman = {
+#       enable = true;
+#       # NOTE: dockerCompat = true creates the 'docker' alias for the podman command.
+#       # It does NOT conflict with the Docker daemon socket unless 'dockerSocket.enable' is true.
+#       dockerSocket.enable = true;
+#       dockerCompat = true;
+#       defaultNetwork.settings.dns_enabled = true;
+#     };
+
+#     # --- 2. Docker (Backend Daemon) ---
+#     # We keep the real Docker daemon enabled for tools that require the actual .sock file.
+#     # If you want to go "Podman Only" later, set this to false and set
+#     # virtualisation.podman.dockerSocket.enable = true.
+#     virtualisation.docker.enable = false;
+
+#     # --- 3. Container Tools ---
+#     environment.systemPackages = with pkgs; [
+#       distrobox
+#       podman-compose
+#       docker-compose
+#       pods # Native GTK Podman manager
+#     ];
+
+#     # --- 4. System Settings ---
+#     virtualisation.containers.enable = true;
+
+#     # Add user to groups
+#     users.users.alice.extraGroups = [
+#       "podman"
+#       "docker"
+#     ];
+#   };
+# }
