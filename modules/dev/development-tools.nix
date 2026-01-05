@@ -41,7 +41,6 @@ in
       pkgs.devpod-desktop
 
       # --- Tools from UNSTABLE ---
-      # unstable.vscode
       unstable.nixd
       unstable.nil
       unstable.nix-ld

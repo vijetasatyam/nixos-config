@@ -25,20 +25,28 @@ let
 in {
   nixpkgs.config.packageOverrides = pkgs: {
     vscodium-isolated = (unstable.vscodium.override {
-      # We remove useOfficialExtensions and use the internal productConfiguration instead
+      # This version is base-telemetry free but patched for official marketplace
     }).overrideAttrs (oldAttrs: {
       nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
 
-      # This manually injects the MS Marketplace URLs into VSCodium's product.json
+      # Refined patch logic for product.json
       preFixup = (oldAttrs.preFixup or "") + ''
-        gq_path="resources/app/product.json"
-        if [ -f "$out/lib/vscode/$gq_path" ]; then
-          product_json="$out/lib/vscode/$gq_path"
+        # Standard path for VSCodium's product.json
+        gq_path="lib/vscode/resources/app/product.json"
+
+        if [ -f "$out/$gq_path" ]; then
+          product_json="$out/$gq_path"
         else
-          product_json=$(find $out -name product.json | head -n 1)
+          # Fallback to finding it specifically within the lib/vscode structure
+          product_json=$(find $out/lib -path "*/resources/app/product.json" | head -n 1)
         fi
 
-        # Inject Marketplace URLs using python (cleaner than sed for JSON)
+        if [ -z "$product_json" ]; then
+           echo "Error: product.json not found!"
+           exit 1
+        fi
+
+        # Inject Marketplace URLs using python
         ${pkgs.python3}/bin/python3 <<EOF
 import json
 with open('$product_json', 'r') as f:
@@ -53,14 +61,14 @@ with open('$product_json', 'w') as f:
 EOF
       '';
 
-      # Strip the Sync/Account features physically
+      # Physically remove the authentication and account sync extensions [cite: 112]
       postInstall = (oldAttrs.postInstall or "") + ''
         find $out -name "microsoft-authentication" -type d -exec rm -rf {} +
         find $out -name "github-authentication" -type d -exec rm -rf {} +
         find $out -name "microsoft-account" -type d -exec rm -rf {} +
       '';
 
-      # Wrap binary to use a completely separate config folder
+      # Wrap binary with privacy flags and isolated directory [cite: 113]
       postFixup = (oldAttrs.postFixup or "") + ''
         wrapProgram $out/bin/codium \
           --add-flags "--disable-telemetry" \
