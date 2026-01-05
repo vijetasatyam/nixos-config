@@ -12,9 +12,10 @@ let
   };
 in
 {
-  # Import the isolated vscode module
+  # IMPORTS.
   imports = [
     ./vscode.nix
+    ./vscodium.nix
   ];
   # 1. Define the Option
   options = {
