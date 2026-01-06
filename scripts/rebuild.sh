@@ -1,5 +1,5 @@
 #!/bin/bash
-# Features: Triple-Gate Confirmation, Error-Fixed Grep, Clean Diffs, Secret Scanner
+# Features: Default-to-Yes on all prompts, Clean Diffs, GPG Fix, Secret Scanner
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
@@ -16,13 +16,12 @@ cd ~/nixos-config || exit
 
 # Check for uncommitted changes
 if [[ -n $(git status -s) ]]; then
-    echo -e "${YELLOW}📝 Notice:${NC} You have uncommitted changes in your config folder."
+    echo -e "${YELLOW}📝 Notice:${NC} Uncommitted changes found."
     git status -s
 fi
 
 # --- 2. Building ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-# Use --no-link to prevent filling your folder with results if build fails
 sudo nixos-rebuild build 2>&1 | tee $LOG_FILE | grep -E "error:|failed"
 BUILD_STATUS=${PIPESTATUS[0]}
 
@@ -32,17 +31,17 @@ if [ $BUILD_STATUS -ne 0 ]; then
     exit 1
 fi
 
-# --- 3. High-Signal Analysis (Clean Output) ---
+# --- 3. High-Signal Analysis ---
 echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
 
 echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
-# FIX: The -- ensures grep doesn't treat -> as a flag
+# Use -- to prevent grep from misinterpreting the arrow
 nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-# Filter: Only show lines starting with + or - and ignore the massive environment path blobs
+# Show only lines that start with + or - while ignoring massive path strings
 nix-diff --color always --environment /run/current-system ./result | grep -E "^(\s*)[\+\-]" | grep -v "DEFAULT=" || echo "  No significant environment changes."
 
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
@@ -51,16 +50,16 @@ new_size=$(du -shL ./result 2>/dev/null | awk '{print $1}')
 echo -e "Current System Size: ${YELLOW}$old_size${NC}"
 echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
-# --- 4. Gate 1: Activation Prompt ---
+# --- 4. Gate 1: Activation Prompt (Default: YES) ---
 echo -e "\n"
 read -p "❓ Apply this configuration? [Y/n] " confirm
-if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
+if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 5. Applying the Switch
     echo -e "${CYAN}⚙️ Step 3: Activating...${NC}"
     sudo nixos-rebuild switch --quiet
 
-    # 6. Gate 2: Git Commit Prompt
+    # 6. Gate 2: Git Commit Prompt (Default: YES)
     if [ -d .git ]; then
         gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
         git add .
@@ -75,13 +74,13 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                 echo "$LEAKS"
             fi
 
-            echo -ne "\n${YELLOW}💾 Commit changes locally? [y/N] ${NC}"
+            echo -ne "\n${YELLOW}💾 Commit changes locally? [Y/n] ${NC}"
             read -r commit_confirm
-            if [[ $commit_confirm =~ ^[Yy]$ ]]; then
+            if [[ $commit_confirm =~ ^[Yy]$ || $commit_confirm == [yY][eE][sS] || -z $commit_confirm ]]; then
                 if git commit -S -m "NixOS: Gen $gen"; then
                     echo -e "${GREEN}✔ Locally committed Gen $gen${NC}"
 
-                    # 7. Gate 3: Smart Push Detection
+                    # 7. Gate 3: Smart Push Detection (Default: YES)
                     echo -ne "${BLUE}📡 Checking remotes... ${NC}"
                     git fetch --quiet origin main &
                     git fetch --quiet github main &
@@ -95,8 +94,8 @@ if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                         echo -e "${GREEN}☁️ Remotes are already up to date.${NC}"
                     else
                         echo -e "\n${YELLOW}📡 Ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
-                        read -p "🌍 Push to Remotes? [y/N] " push_confirm
-                        if [[ $push_confirm =~ ^[Yy]$ ]]; then
+                        read -p "🌍 Push to Remotes? [Y/n] " push_confirm
+                        if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
                             echo -e "${BLUE}📡 Syncing remotes...${NC}"
                             git push origin main && git push github main
                             echo -e "${GREEN}✅ Remotes updated.${NC}"
