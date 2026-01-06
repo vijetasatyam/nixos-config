@@ -1,115 +1,81 @@
 #!/bin/bash
-# Features: Default-to-Yes, Auto-Skip Clean Git, Smart Push Detection, No du errors, GPG TTY fix
-
-# Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
 
-# --- Color Definitions ---
-BLUE='\033[1;34m'
-GREEN='\033[1;32m'
-RED='\033[1;31m'
-YELLOW='\033[1;33m'
-CYAN='\033[1;36m'
-NC='\033[0m'
+# --- Colors & Icons ---
+BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
+CHECK="✔"; ERROR="✖"; INFO="ℹ"
 
 START_TIME=$SECONDS
-LOG_FILE="/tmp/nixos-build-error.log"
+LOG_FILE="/tmp/nixos-build.log"
 
-# --- 1. Preparation ---
-echo -e "${BLUE}🚀 Starting Ultimate NixOS Rebuild...${NC}"
+echo -e "${BLUE}🚀 NixOS Evolution Started...${NC}"
 cd ~/nixos-config || exit
 
-# Check for uncommitted changes
-if [[ -n $(git status -s) ]]; then
-    echo -e "${YELLOW}📝 Notice:${NC} You have uncommitted changes in your config folder."
-    git status -s
-fi
-
-# --- 2. Building with Error Capture ---
-echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-
-sudo nixos-rebuild build 2>&1 | tee $LOG_FILE
-BUILD_STATUS=${PIPESTATUS[0]}
+# --- 1. Silent Build ---
+# We hide everything unless there is an error
+echo -ne "${BLUE}🔨 Building Generation... ${NC}"
+sudo nixos-rebuild build > $LOG_FILE 2>&1
+BUILD_STATUS=$?
 
 if [ $BUILD_STATUS -ne 0 ]; then
-    echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
-    echo -e "${YELLOW}Relevant Error Snippet:${NC}"
-    grep -i "error:" $LOG_FILE | tail -n 10
-    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${RED}${ERROR} FAILED${NC}"
+    echo -e "${YELLOW}Last 10 lines of error log:${NC}"
+    tail -n 10 $LOG_FILE | grep -iE "error:|failed"
     exit 1
 fi
+echo -e "${GREEN}${CHECK} DONE${NC}"
 
-# --- 3. The Triple Diff Analysis ---
-echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
+# --- 2. High-Signal Diff Analysis ---
+echo -e "\n${BLUE}🔍 Change Summary:${NC}"
 
-echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
-echo -e "${YELLOW}--------------------------------------------------${NC}"
-nvd diff /run/current-system ./result
-echo -e "${YELLOW}--------------------------------------------------${NC}"
+# Package versions (nvd)
+# We use -- to tell grep "->"" is a string, not a flag
+echo -ne "${YELLOW}📦 Packages: ${NC}"
+nvd diff /run/current-system ./result | grep -- "->" | sed 's/^/  /' || echo " No version changes."
 
-echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-nix-diff --color always --environment /run/current-system ./result
+# Env changes (nix-diff)
+echo -ne "${YELLOW}⚙️ Environment: ${NC}"
+# Filter out the boring derivation paths and just show actual env var changes
+nix-diff --environment /run/current-system ./result | grep -E "^\+|^-" | grep -v "derivation" | sed 's/^/  /' || echo " No env changes."
 
-echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
+# Size Comparison (Silencing permission errors)
+# 2>/dev/null hides the "Permission denied" junk
 old_size=$(du -shL /run/current-system 2>/dev/null | awk '{print $1}')
 new_size=$(du -shL ./result 2>/dev/null | awk '{print $1}')
-echo -e "Current System Size: ${YELLOW}$old_size${NC}"
-echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
-# --- 4. Activation Prompt (Default: YES) ---
-echo -e "\n"
-read -p "❓ Apply this configuration? [Y/n] " confirm
-if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
+if [ "$old_size" == "$new_size" ]; then
+    echo -e "${YELLOW}💾 Size Check: ${NC}${old_size} (No change)"
+else
+    echo -e "${YELLOW}💾 Size Check: ${NC}${old_size} ➔ ${GREEN}${new_size}${NC}"
+fi
 
-    # 5. Applying the Switch
-    echo -e "${CYAN}⚙️ Step 3: Activating configuration...${NC}"
-    sudo nixos-rebuild switch
+# --- 3. Activation ---
+echo -ne "\n${BLUE}❓ Apply Evolution? [Y/n] ${NC}"
+read -r confirm
+if [[ $confirm == [yY] || -z $confirm ]]; then
 
-    # 6. Git Automation
+    # Switch silently but show critical errors
+    echo -ne "${BLUE}⚙️ Activating... ${NC}"
+    sudo nixos-rebuild switch --quiet > /dev/null 2>&1
+    echo -e "${GREEN}${CHECK}${NC}"
+
+    # --- 4. Git Intelligence ---
     gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
-
-    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Checking Git status..."
     git add .
 
-    # Check for staged changes
-    if git diff --cached --quiet; then
-        echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
-    else
-        if git commit -S -m "NixOS Rebuild: Generation $gen"; then
-            echo -e "${GREEN}💾 Commit successful.${NC}"
-        else
-            echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
-            echo -e "${YELLOW}Tip: Try running 'gpg-connect-agent reloadagent /bye' if the prompt didn't appear.${NC}"
-        fi
-    fi
+    if ! git diff --cached --quiet; then
+        git commit -S -m "Gen $gen" --quiet
+        echo -e "${GREEN}${CHECK} Committed Gen $gen${NC}"
 
-    # --- 7. Smart Push Detection ---
-    # Sync remote info without downloading objects
-    git fetch --quiet origin main &
-    git fetch --quiet github main &
-    wait
-
-    # Count commits ahead of remotes
-    AHEAD_ORIGIN=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
-    AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
-
-    if [ "$AHEAD_ORIGIN" -eq 0 ] && [ "$AHEAD_GITHUB" -eq 0 ]; then
-        echo -e "\n${GREEN}☁️ Remotes are already up to date.${NC}"
-    else
-        echo -e "\n${YELLOW}📡 You are ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
-        read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
-        if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
-            echo -e "${BLUE}📡 Syncing remotes...${NC}"
-            git push origin main && git push github main
-            echo -e "${GREEN}✅ Remotes updated.${NC}"
-        else
-            echo -e "${YELLOW}⏭️ Push skipped.${NC}"
-        fi
+        # Smart Push (One-line summary)
+        echo -ne "${BLUE}📡 Syncing Remotes... ${NC}"
+        (git push origin main && git push github main) > /dev/null 2>&1
+        echo -e "${GREEN}${CHECK} GitHub/Codeberg Updated${NC}"
     fi
 
     ELAPSED=$(( SECONDS - START_TIME ))
-    echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Build Time: $((ELAPSED/60))m $((ELAPSED%60))s)${NC}"
+    echo -e "\n${GREEN}✨ Evolution Complete. (Time: ${ELAPSED}s)${NC}"
 else
-    echo -e "${YELLOW}⏹️ Switch cancelled.${NC} No Git commit made."
+    echo -e "${YELLOW}⏹️ Cancelled.${NC}"
     rm ./result
 fi
