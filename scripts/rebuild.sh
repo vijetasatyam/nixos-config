@@ -1,16 +1,11 @@
 #!/bin/bash
-# Features: Default-to-Yes, Auto-Skip Clean Git, Smart Push Detection, No du errors, GPG TTY fix
+# Features: Triple-Gate Confirmation, Error-Fixed Grep, Clean Diffs, Secret Scanner
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
 
 # --- Color Definitions ---
-BLUE='\033[1;34m'
-GREEN='\033[1;32m'
-RED='\033[1;31m'
-YELLOW='\033[1;33m'
-CYAN='\033[1;36m'
-NC='\033[0m'
+BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; CYAN='\033[1;36m'; NC='\033[0m'
 
 START_TIME=$SECONDS
 LOG_FILE="/tmp/nixos-build-error.log"
@@ -25,30 +20,30 @@ if [[ -n $(git status -s) ]]; then
     git status -s
 fi
 
-# --- 2. Building with Error Capture ---
+# --- 2. Building ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-
-sudo nixos-rebuild build 2>&1 | tee $LOG_FILE
+# Use --no-link to prevent filling your folder with results if build fails
+sudo nixos-rebuild build 2>&1 | tee $LOG_FILE | grep -E "error:|failed"
 BUILD_STATUS=${PIPESTATUS[0]}
 
 if [ $BUILD_STATUS -ne 0 ]; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
-    echo -e "${YELLOW}Relevant Error Snippet:${NC}"
     grep -i "error:" $LOG_FILE | tail -n 10
-    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     exit 1
 fi
 
-# --- 3. The Triple Diff Analysis ---
+# --- 3. High-Signal Analysis (Clean Output) ---
 echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
 
 echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
-nvd diff /run/current-system ./result
+# FIX: The -- ensures grep doesn't treat -> as a flag
+nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-nix-diff --color always --environment /run/current-system ./result
+# Filter: Only show lines starting with + or - and ignore the massive environment path blobs
+nix-diff --color always --environment /run/current-system ./result | grep -E "^(\s*)[\+\-]" | grep -v "DEFAULT=" || echo "  No significant environment changes."
 
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
 old_size=$(du -shL /run/current-system 2>/dev/null | awk '{print $1}')
@@ -56,60 +51,70 @@ new_size=$(du -shL ./result 2>/dev/null | awk '{print $1}')
 echo -e "Current System Size: ${YELLOW}$old_size${NC}"
 echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
-# --- 4. Activation Prompt (Default: YES) ---
+# --- 4. Gate 1: Activation Prompt ---
 echo -e "\n"
 read -p "❓ Apply this configuration? [Y/n] " confirm
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 5. Applying the Switch
-    echo -e "${CYAN}⚙️ Step 3: Activating configuration...${NC}"
-    sudo nixos-rebuild switch
+    echo -e "${CYAN}⚙️ Step 3: Activating...${NC}"
+    sudo nixos-rebuild switch --quiet
 
-    # 6. Git Automation
-    gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
+    # 6. Gate 2: Git Commit Prompt
+    if [ -d .git ]; then
+        gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
+        git add .
 
-    echo -e "\n${GREEN}✅ Rebuild successful!${NC} Checking Git status..."
-    git add .
-
-    # Check for staged changes
-    if git diff --cached --quiet; then
-        echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
-    else
-        if git commit -S -m "NixOS Rebuild: Generation $gen"; then
-            echo -e "${GREEN}💾 Commit successful.${NC}"
+        if git diff --cached --quiet; then
+            echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
         else
-            echo -e "${RED}⚠️ Commit failed (Check GPG/Passphrase).${NC}"
-            echo -e "${YELLOW}Tip: Try running 'gpg-connect-agent reloadagent /bye' if the prompt didn't appear.${NC}"
-        fi
-    fi
+            # Secret Scanner
+            LEAKS=$(git diff --cached | grep -iE "PRIVATE KEY|PASSWORD|SECRET_KEY|API_KEY" | grep "^+")
+            if [ -n "$LEAKS" ]; then
+                echo -e "${RED}⚠️  POTENTIAL SECRET LEAK DETECTED:${NC}"
+                echo "$LEAKS"
+            fi
 
-    # --- 7. Smart Push Detection ---
-    # Sync remote info without downloading objects
-    git fetch --quiet origin main &
-    git fetch --quiet github main &
-    wait
+            echo -ne "\n${YELLOW}💾 Commit changes locally? [y/N] ${NC}"
+            read -r commit_confirm
+            if [[ $commit_confirm =~ ^[Yy]$ ]]; then
+                if git commit -S -m "NixOS: Gen $gen"; then
+                    echo -e "${GREEN}✔ Locally committed Gen $gen${NC}"
 
-    # Count commits ahead of remotes
-    AHEAD_ORIGIN=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
-    AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
+                    # 7. Gate 3: Smart Push Detection
+                    echo -ne "${BLUE}📡 Checking remotes... ${NC}"
+                    git fetch --quiet origin main &
+                    git fetch --quiet github main &
+                    wait
+                    echo -e "${GREEN}Done${NC}"
 
-    if [ "$AHEAD_ORIGIN" -eq 0 ] && [ "$AHEAD_GITHUB" -eq 0 ]; then
-        echo -e "\n${GREEN}☁️ Remotes are already up to date.${NC}"
-    else
-        echo -e "\n${YELLOW}📡 You are ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
-        read -p "🌍 Push changes to Codeberg and GitHub? [Y/n] " push_confirm
-        if [[ $push_confirm == [yY] || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
-            echo -e "${BLUE}📡 Syncing remotes...${NC}"
-            git push origin main && git push github main
-            echo -e "${GREEN}✅ Remotes updated.${NC}"
-        else
-            echo -e "${YELLOW}⏭️ Push skipped.${NC}"
+                    AHEAD_ORIGIN=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
+                    AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
+
+                    if [ "$AHEAD_ORIGIN" -eq 0 ] && [ "$AHEAD_GITHUB" -eq 0 ]; then
+                        echo -e "${GREEN}☁️ Remotes are already up to date.${NC}"
+                    else
+                        echo -e "\n${YELLOW}📡 Ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
+                        read -p "🌍 Push to Remotes? [y/N] " push_confirm
+                        if [[ $push_confirm =~ ^[Yy]$ ]]; then
+                            echo -e "${BLUE}📡 Syncing remotes...${NC}"
+                            git push origin main && git push github main
+                            echo -e "${GREEN}✅ Remotes updated.${NC}"
+                        else
+                            echo -e "${YELLOW}⏭️ Push skipped.${NC}"
+                        fi
+                    fi
+                fi
+            else
+                echo -e "${YELLOW}⏭️ Commit skipped.${NC}"
+            fi
         fi
     fi
 
     ELAPSED=$(( SECONDS - START_TIME ))
-    echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Build Time: $((ELAPSED/60))m $((ELAPSED%60))s)${NC}"
-else
-    echo -e "${YELLOW}⏹️ Switch cancelled.${NC} No Git commit made."
+    echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Time: ${ELAPSED}s)${NC}"
     rm ./result
+else
+    echo -e "${YELLOW}⏹️ Switch cancelled.${NC}"
+    [ -L ./result ] && rm ./result
 fi
