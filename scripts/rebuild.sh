@@ -1,5 +1,5 @@
 #!/bin/bash
-# Features: Default-to-Yes on all prompts, Clean Diffs, GPG Fix, Secret Scanner
+# Features: Flake Support, Clean Diffs, GPG Fix, Secret Scanner, Explicit Git Consent, Custom Commit Msg
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
@@ -11,7 +11,7 @@ START_TIME=$SECONDS
 LOG_FILE="/tmp/nixos-build-error.log"
 
 # --- 1. Preparation ---
-echo -e "${BLUE}🚀 Starting Ultimate NixOS Rebuild...${NC}"
+echo -e "${BLUE}🚀 Starting NixOS Flake Rebuild...${NC}"
 cd ~/nixos-config || exit
 
 # Check for uncommitted changes
@@ -20,9 +20,9 @@ if [[ -n $(git status -s) ]]; then
     git status -s
 fi
 
-# --- 2. Building ---
+# --- 2. Building (Flake) ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-sudo nixos-rebuild build 2>&1 | tee $LOG_FILE | grep -E "error:|failed"
+sudo nixos-rebuild build --flake ./flake#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"
 BUILD_STATUS=${PIPESTATUS[0]}
 
 if [ $BUILD_STATUS -ne 0 ]; then
@@ -36,12 +36,10 @@ echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
 
 echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
-# Use -- to prevent grep from misinterpreting the arrow
 nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-# Show only lines that start with + or - while ignoring massive path strings
 nix-diff --color always --environment /run/current-system ./result | grep -E "^(\s*)[\+\-]" | grep -v "DEFAULT=" || echo "  No significant environment changes."
 
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
@@ -50,18 +48,19 @@ new_size=$(du -shL ./result 2>/dev/null | awk '{print $1}')
 echo -e "Current System Size: ${YELLOW}$old_size${NC}"
 echo -e "New System Size:     ${GREEN}$new_size${NC}"
 
-# --- 4. Gate 1: Activation Prompt (Default: YES) ---
+# --- 4. Gate 1: Activation Prompt ---
 echo -e "\n"
 read -p "❓ Apply this configuration? [Y/n] " confirm
 if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 5. Applying the Switch
     echo -e "${CYAN}⚙️ Step 3: Activating...${NC}"
-    sudo nixos-rebuild switch --quiet
+    sudo nixos-rebuild switch --flake ./flake#nixos --quiet
 
-    # 6. Gate 2: Git Commit Prompt (Default: YES)
+    # 6. Gate 2: Git Commit (With Message Prompt)
     if [ -d .git ]; then
-        gen=$(nixos-rebuild list-generations | grep current | awk '{print $1}')
+        gen=$(nixos-rebuild list-generations --flake ./flake#nixos | grep current | awk '{print $1}')
+
         git add .
 
         if git diff --cached --quiet; then
@@ -74,13 +73,23 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                 echo "$LEAKS"
             fi
 
-            echo -ne "\n${YELLOW}💾 Commit changes locally? [Y/n] ${NC}"
+            echo -ne "\n${YELLOW}💾 Commit changes locally? [y/N] ${NC}"
             read -r commit_confirm
-            if [[ $commit_confirm =~ ^[Yy]$ || $commit_confirm == [yY][eE][sS] || -z $commit_confirm ]]; then
-                if git commit -S -m "NixOS: Gen $gen"; then
-                    echo -e "${GREEN}✔ Locally committed Gen $gen${NC}"
 
-                    # 7. Gate 3: Smart Push Detection (Default: YES)
+            if [[ $commit_confirm =~ ^[Yy]$ || $commit_confirm == [yY][eE][sS] ]]; then
+
+                # --- NEW: Commit Message Prompt ---
+                default_msg="NixOS: Gen $gen"
+                echo -ne "${CYAN}📝 Enter commit message (Default: '$default_msg'): ${NC}"
+                read -r custom_msg
+
+                # Use custom message if provided, otherwise use default
+                commit_msg=${custom_msg:-$default_msg}
+
+                if git commit -S -m "$commit_msg"; then
+                    echo -e "${GREEN}✔ Committed with message: \"$commit_msg\"${NC}"
+
+                    # 7. Gate 3: Push
                     echo -ne "${BLUE}📡 Checking remotes... ${NC}"
                     git fetch --quiet origin main &
                     git fetch --quiet github main &
@@ -94,8 +103,9 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                         echo -e "${GREEN}☁️ Remotes are already up to date.${NC}"
                     else
                         echo -e "\n${YELLOW}📡 Ahead by $AHEAD_ORIGIN (origin) and $AHEAD_GITHUB (github) commits.${NC}"
-                        read -p "🌍 Push to Remotes? [Y/n] " push_confirm
-                        if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] || -z $push_confirm ]]; then
+                        read -p "🌍 Push to Remotes? [y/N] " push_confirm
+
+                        if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] ]]; then
                             echo -e "${BLUE}📡 Syncing remotes...${NC}"
                             git push origin main && git push github main
                             echo -e "${GREEN}✅ Remotes updated.${NC}"

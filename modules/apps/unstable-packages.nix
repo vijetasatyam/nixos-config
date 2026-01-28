@@ -1,23 +1,15 @@
-{
-  config,
-  ...
-}:
+{ config, pkgs, pkgs-unstable, ... }:
 
-let
-  unstable = import <unstable> {
-    config = config.nixpkgs.config;
-  };
-in
 {
   environment.systemPackages = [
     # Obsidian works great from unstable
-    unstable.obsidian
+    pkgs-unstable.obsidian
 
     # Recommended: Vesktop instead of Discord for better Wayland support
-    unstable.vesktop
+    pkgs-unstable.vesktop
 
-    # Or, if you prefer the official one:
-    # (unstable.discord.override { withVencord = true; })
+    # If you prefer standard Discord:
+    # pkgs-unstable.discord
   ];
 
   # This variable fixes blurry text and screen sharing for Obsidian/Discord
