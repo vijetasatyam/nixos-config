@@ -9,6 +9,7 @@
     ./dev/git-config.nix
     ./dev/development-tools.nix
     ./dev/terminal.nix
+    ./dev/zsh.nix
   ];
 
   # General User Packages

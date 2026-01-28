@@ -2,7 +2,7 @@
   lib,
   electron,
   zip,
-  nodejs_24,
+  nodejs,
   makeWrapper,
   udev,
   usbutils,
@@ -45,7 +45,7 @@ buildNpmPackage (final: {
 
   env.ELECTRON_SKIP_BINARY_DOWNLOAD = 1;
   npmDepsHash = "sha256-DLkI9a030uM2X1et94e4nd/HEyw5ugtK8NEAn/J8p9U=";
-  nodejs = nodejs_24;
+  nodejs = nodejs;
   makeCacheWritable = true;
 
   guest-server = pkgsCross.mingwW64.callPackage ./guest-server.nix { };

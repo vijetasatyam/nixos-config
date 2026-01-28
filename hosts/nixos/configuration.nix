@@ -11,6 +11,7 @@
 
     # --- Core System Modules ---
     ../../modules/core/aliases.nix
+    ../../modules/core/extra-config.nix
     ../../modules/core/flathub.nix
     ../../modules/core/networking.nix
     ../../modules/core/services.nix
@@ -34,6 +35,4 @@
 
   # Enable VMware Guest modules if needed
   modules.vmware.enable = true;
-
-  system.stateVersion = "25.11";
 }

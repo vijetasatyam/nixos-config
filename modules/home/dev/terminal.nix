@@ -23,8 +23,8 @@
     theme = Dracula
 
     # --- Window UI ---
-    window-decoration = false
-    gtk-titlebar = false
+    window-decoration = true
+    gtk-titlebar = true
 
     # --- Integration ---
     # Adjust this if you use bash instead of zsh
