@@ -1,11 +1,18 @@
-{ config, pkgs, pkgs-unstable, ... }:
+{
+  config,
+  pkgs,
+  pkgs-unstable,
+  ...
+}:
 
 {
   home.username = "alice";
   home.homeDirectory = "/home/alice";
 
-  # Import User Configs
+  # Import User Configs`
   imports = [
+    ./dev/vscode.nix
+    ./dev/vscodium.nix
     ./dev/git-config.nix
     ./dev/development-tools.nix
     ./dev/terminal.nix
