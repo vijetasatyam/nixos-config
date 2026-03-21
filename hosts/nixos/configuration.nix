@@ -30,7 +30,7 @@
     # NOTE: These MUST stay in system config, they use virtualisation.* options
     ../../modules/dev/dev-tools.nix
     ../../modules/dev/virtual-machines.nix
-    ../../modules/dev/winboat.nix
+    # ../../modules/dev/winboat.nix
   ];
 
   # Enable VMware Guest modules if needed
