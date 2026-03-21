@@ -4,14 +4,14 @@
   home.packages = with pkgs; [
     git
     gnupg
-    pinentry-all
+    pinentry-gnome3
   ];
 
   services.gpg-agent = {
     enable = true;
     enableSshSupport = true;
     # FIX: Syntax change from 'pinentryPackage' to 'pinentry.package'
-    pinentry.package = pkgs.pinentry-all;
+    pinentry.package = pkgs.pinentry-gnome3;
   };
 
   programs.git = {
