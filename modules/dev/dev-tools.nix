@@ -1,4 +1,7 @@
-{ config, pkgs, ... }:
+{
+  # config,
+  pkgs,
+  ... }:
 
 {
   # 1. NIX-LD (Required for running unpatched binaries like VSCode extensions)
