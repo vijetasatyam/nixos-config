@@ -1,4 +1,7 @@
-{ config, pkgs, ... }:
+{
+  # config,
+  # pkgs,
+  ... }:
 
 {
   # --- 1. Nix Settings ---

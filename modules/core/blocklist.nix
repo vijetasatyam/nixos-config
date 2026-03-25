@@ -1,4 +1,7 @@
-{ config, pkgs, ... }:
+{
+  # config,
+  # pkgs,
+  ... }:
 
 let
   blocked-domains = [
