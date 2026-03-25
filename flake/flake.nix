@@ -2,63 +2,48 @@
   description = "Alice's Modular Hybrid Config";
 
   inputs = {
-    # 1. Stable Base (Matches your system.stateVersion = "25.11")
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    # 1. Stable Base
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11"; [cite: 197]
 
-    # 2. Unstable Source (For specific apps like Neovim/VSCode)
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    # 2. Unstable Source
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable"; [cite: 198]
 
-    # 3. Home Manager (Matched to Stable 25.11)
+    # 3. Home Manager
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/home-manager/release-25.11"; [cite: 199]
+      inputs.nixpkgs.follows = "nixpkgs"; [cite: 200]
     };
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      nixpkgs-unstable,
-      home-manager,
-      ...
-    }@inputs:
-    {
-      nixosConfigurations = {
-        # Hostname "nixos" matches your configuration.nix [cite: 29]
-        nixos = nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, ... }@inputs:
+    let
+      system = "x86_64-linux";
 
-          # Pass 'pkgs-unstable' to System Modules
-          specialArgs = {
-            inherit inputs;
-            pkgs-unstable = import nixpkgs-unstable {
-              system = "x86_64-linux";
-              config.allowUnfree = true;
-            };
-          };
+      # THE FIX: Instantiate unstable exactly ONCE to save massive amounts of RAM
+      pkgs-unstable = import nixpkgs-unstable {
+        inherit system;
+        config.allowUnfree = true; [cite: 203]
+      };
+    in {
+      nixosConfigurations = {
+        nixos = nixpkgs.lib.nixosSystem {
+          inherit system;
+
+          # Pass the single instance down
+          specialArgs = { inherit inputs pkgs-unstable; };
 
           modules = [
-            # Import existing system config (Adjusted path for flake/ subdir)
             ../hosts/nixos/configuration.nix
 
-            # Enable Home Manager
             home-manager.nixosModules.home-manager
             {
               home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
+              home-manager.useUserPackages = true; [cite: 204]
 
-              # Pass 'pkgs-unstable' to Home Manager Modules
-              home-manager.extraSpecialArgs = {
-                inherit inputs;
-                pkgs-unstable = import nixpkgs-unstable {
-                  system = "x86_64-linux";
-                  config.allowUnfree = true;
-                };
-              };
+              # Pass the same single instance to Home Manager
+              home-manager.extraSpecialArgs = { inherit inputs pkgs-unstable; };
 
-              # Import your new User Hub
-              home-manager.users.alice = import ../modules/home/home.nix;
+              home-manager.users.alice = import ../modules/home/home.nix; [cite: 206]
             }
           ];
         };
