@@ -7,7 +7,7 @@
 
 {
   imports = [
-    # ./containers.nix
+    ./containers.nix
     # ./winboat.nix
   ];
 
