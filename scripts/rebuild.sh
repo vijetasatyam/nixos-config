@@ -61,6 +61,12 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
         # Fast generation extraction
         gen=$(ls -l /nix/var/nix/profiles/system | grep -Eo 'system-[0-9]+-link' | tail -1 | grep -Eo '[0-9]+')
 
+        # --- NEW: Auto-Formatting Phase ---
+        echo -e "\n${CYAN}🧹 Formatting .nix files with Alejandra...${NC}"
+        # This uses 'nix run' to fetch and execute alejandra without permanently installing it
+        nix run nixpkgs#alejandra -- --quiet .
+
+        # Stage the newly formatted files (along with any other changes)
         git add .
 
         if git diff --cached --quiet; then
