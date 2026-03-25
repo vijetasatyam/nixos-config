@@ -10,14 +10,12 @@
   services.gpg-agent = {
     enable = true;
     enableSshSupport = true;
-    # FIX: Syntax change from 'pinentryPackage' to 'pinentry.package'
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
   programs.git = {
     enable = true;
 
-    # FIX: Syntax change from 'extraConfig' to 'settings'
     settings = {
       init.defaultBranch = "main";
       pull.rebase = false;
@@ -30,9 +28,12 @@
           [user]
             name = vijetasatyam
             email = vijetasatyam@gmail.com
-            signingkey = 3D9E0D76FFDBAFC3
+            # YOUR BRAND NEW KEY ID
+            signingkey = 84CCFF76E30A0E07C9C256EB0C343897BCCA0280
+
           [commit]
             gpgsign = true
+
           [tag]
             gpgsign = true
         '';
