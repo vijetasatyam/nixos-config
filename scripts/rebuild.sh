@@ -1,5 +1,5 @@
 #!/bin/bash
-# Features: Flake Support, Clean Diffs, GPG Fix, Secret Scanner, Explicit Git Consent, Custom Commit Msg
+set -uo pipefail
 
 # Ensure GPG can find the terminal for passphrase entry
 export GPG_TTY=$(tty)
@@ -10,11 +10,13 @@ BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; CY
 START_TIME=$SECONDS
 LOG_FILE="/tmp/nixos-build-error.log"
 
+# Clean up the result symlink perfectly, even if the script crashes or is Ctrl+C'd
+trap 'rm -f ./result' EXIT
+
 # --- 1. Preparation ---
 echo -e "${BLUE}🚀 Starting NixOS Flake Rebuild...${NC}"
 cd ~/nixos-config || exit
 
-# Check for uncommitted changes
 if [[ -n $(git status -s) ]]; then
     echo -e "${YELLOW}📝 Notice:${NC} Uncommitted changes found."
     git status -s
@@ -22,10 +24,7 @@ fi
 
 # --- 2. Building (Flake) ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-sudo nixos-rebuild build --flake ./flake#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"
-BUILD_STATUS=${PIPESTATUS[0]}
-
-if [ $BUILD_STATUS -ne 0 ]; then
+if ! sudo nixos-rebuild build --flake ./flake#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
     grep -i "error:" $LOG_FILE | tail -n 10
     exit 1
@@ -36,7 +35,7 @@ echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
 
 echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
-nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:"
+nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:" || echo "No package version changes."
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
@@ -57,9 +56,10 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
     echo -e "${CYAN}⚙️ Step 3: Activating...${NC}"
     sudo nixos-rebuild switch --flake ./flake#nixos --quiet
 
-    # 6. Gate 2: Git Commit (With Message Prompt)
+    # 6. Gate 2: Git Commit
     if [ -d .git ]; then
-        gen=$(nixos-rebuild list-generations --flake ./flake#nixos | grep current | awk '{print $1}')
+        # Fast generation extraction
+        gen=$(ls -l /nix/var/nix/profiles/system | grep -Eo 'system-[0-9]+-link' | tail -1 | grep -Eo '[0-9]+')
 
         git add .
 
@@ -71,6 +71,12 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
             if [ -n "$LEAKS" ]; then
                 echo -e "${RED}⚠️  POTENTIAL SECRET LEAK DETECTED:${NC}"
                 echo "$LEAKS"
+                read -p "🚨 Do you want to ABORT the commit to fix this? [Y/n] " leak_confirm
+                if [[ $leak_confirm =~ ^[Yy]$ || -z $leak_confirm ]]; then
+                    git reset HEAD # Unstage everything
+                    echo -e "${YELLOW}⏹️ Commit aborted. Files unstaged.${NC}"
+                    exit 1
+                fi
             fi
 
             echo -ne "\n${YELLOW}💾 Commit changes locally? [y/N] ${NC}"
@@ -78,12 +84,9 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
             if [[ $commit_confirm =~ ^[Yy]$ || $commit_confirm == [yY][eE][sS] ]]; then
 
-                # --- NEW: Commit Message Prompt ---
                 default_msg="NixOS: Gen $gen"
                 echo -ne "${CYAN}📝 Enter commit message (Default: '$default_msg'): ${NC}"
                 read -r custom_msg
-
-                # Use custom message if provided, otherwise use default
                 commit_msg=${custom_msg:-$default_msg}
 
                 if git commit -S -m "$commit_msg"; then
@@ -122,8 +125,6 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     ELAPSED=$(( SECONDS - START_TIME ))
     echo -e "\n${GREEN}✨ DONE! System is at Generation $gen. (Time: ${ELAPSED}s)${NC}"
-    rm ./result
 else
     echo -e "${YELLOW}⏹️ Switch cancelled.${NC}"
-    [ -L ./result ] && rm ./result
 fi

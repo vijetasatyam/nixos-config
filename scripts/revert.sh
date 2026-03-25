@@ -1,33 +1,44 @@
 #!/bin/bash
-# Revert script to jump back to a previous Git-tracked configuration
+set -euo pipefail
+
+# --- Color Definitions ---
+BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 cd ~/nixos-config || exit
 
-# 1. Show the last 10 commits so you can see where you want to go
-echo "--- Recent Configuration History ---"
+echo -e "${BLUE}--- Recent Configuration History ---${NC}"
 git log --oneline -n 10
-echo "------------------------------------"
+echo -e "${BLUE}------------------------------------${NC}"
 
-# 2. Ask for the Commit Hash
-read -p "Enter the Commit Hash to revert to (or press Enter to cancel): " hash
+read -p "🎯 Enter the Commit Hash to revert to (or press Enter to cancel): " hash
 
 if [[ -z "$hash" ]]; then
-    echo "Revert cancelled."
+    echo -e "${YELLOW}⏹️ Revert cancelled.${NC}"
     exit 0
 fi
 
-# 3. Confirm the action
-read -p "This will reset your local files to $hash. Continue? (y/N) " confirm
-if [[ $confirm == [yY] ]]; then
+# Check for uncommitted changes before doing a hard reset
+if [[ -n $(git status -s) ]]; then
+    echo -e "${RED}⚠️ WARNING: You have uncommitted changes!${NC}"
+    echo "A hard reset will PERMANENTLY delete them."
+    read -p "Are you absolutely sure you want to proceed? (y/N) " dirty_confirm
+    if [[ ! $dirty_confirm =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}⏹️ Revert aborted to save uncommitted work.${NC}"
+        exit 1
+    fi
+fi
 
-    # 4. Use Git to reset the files
+read -p "⚠️ This will reset your local files to $hash. Continue? (y/N) " confirm
+if [[ $confirm =~ ^[Yy]$ ]]; then
+
+    echo -e "${CYAN}⏪ Resetting files to $hash...${NC}"
     git reset --hard "$hash"
 
-    # 5. Rebuild the system to match the files
-    echo "Rebuilding system to match configuration at $hash..."
-    sudo nixos-rebuild switch
+    # CRITICAL: Added the flake flag here!
+    echo -e "${CYAN}⚙️ Rebuilding system to match configuration at $hash...${NC}"
+    sudo nixos-rebuild switch --flake ./flake#nixos
 
-    echo "Revert Complete! Your system now matches commit $hash."
+    echo -e "${GREEN}✨ Revert Complete! Your system now matches commit $hash.${NC}"
 else
-    echo "Revert aborted."
+    echo -e "${YELLOW}⏹️ Revert aborted.${NC}"
 fi
