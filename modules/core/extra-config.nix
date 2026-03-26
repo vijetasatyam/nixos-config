@@ -1,12 +1,11 @@
 {
   # config,
   # pkgs,
-  ... }:
-
-{
+  ...
+}: {
   # --- 1. Nix Settings ---
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = ["nix-command" "flakes"];
     auto-optimise-store = true;
 
     # Prevent "Buffer Full" warning

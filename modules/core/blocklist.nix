@@ -1,9 +1,8 @@
 {
   # config,
   # pkgs,
-  ... }:
-
-let
+  ...
+}: let
   blocked-domains = [
     "telemetry.msedge.net"
     "vortex.data.microsoft.com"
@@ -18,8 +17,7 @@ let
     "vscode-sync.trafficmanager.net"
     "vscode-sync.azurewebsites.net"
   ];
-in
-{
+in {
   # Map 127.0.0.1 to all blocked domains in /etc/hosts
   networking.hosts."127.0.0.1" = blocked-domains;
 }

@@ -1,9 +1,8 @@
 {
   # config,
   pkgs,
-  ... }:
-
-{
+  ...
+}: {
   # 1. NIX-LD (Required for running unpatched binaries like VSCode extensions)
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [

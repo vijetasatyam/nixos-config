@@ -1,6 +1,10 @@
-{ config, pkgs, lib, pkgs-unstable, ... }:
-
-let
+{
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: let
   vscodeSettings = {
     "telemetry.telemetryLevel" = "off";
     "datatools.enableTelemetry" = false;
@@ -22,7 +26,7 @@ let
     "editor.links" = false;
     "breadcrumbs.enabled" = false;
     "ai.suggest.enabled" = false;
-    "github.copilot.enable" = { "*" = false; };
+    "github.copilot.enable" = {"*" = false;};
     "github.copilot.editor.enableAutoCompletions" = false;
     "intellicode.features.python.deepLearning" = "disabled";
     "extensions.ignoreRecommendations" = true;
@@ -31,29 +35,31 @@ let
   };
 
   vscodePrivate = pkgs-unstable.vscode.overrideAttrs (oldAttrs: {
-    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
-    postInstall = (oldAttrs.postInstall or "") + ''
-      find $out -name "microsoft-authentication" -type d -exec rm -rf {} +
-      find $out -name "github-authentication" -type d -exec rm -rf {} +
-      find $out -name "microsoft-account" -type d -exec rm -rf {} +
-    '';
-    postFixup = (oldAttrs.postFixup or "") + ''
-      wrapProgram $out/bin/code \
-        --add-flags "--disable-telemetry" \
-        --add-flags "--disable-crash-reporter" \
-        --add-flags "--disable-extension-telemetry" \
-        --add-flags "--disable-userdata-auth" \
-        --add-flags "--disable-features=Sync" \
-        --add-flags "--no-proxy-server" \
-        --add-flags "--user-data-dir ~/.config/Code-Isolated"
-    '';
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [pkgs.makeWrapper];
+    postInstall =
+      (oldAttrs.postInstall or "")
+      + ''
+        find $out -name "microsoft-authentication" -type d -exec rm -rf {} +
+        find $out -name "github-authentication" -type d -exec rm -rf {} +
+        find $out -name "microsoft-account" -type d -exec rm -rf {} +
+      '';
+    postFixup =
+      (oldAttrs.postFixup or "")
+      + ''
+        wrapProgram $out/bin/code \
+          --add-flags "--disable-telemetry" \
+          --add-flags "--disable-crash-reporter" \
+          --add-flags "--disable-extension-telemetry" \
+          --add-flags "--disable-userdata-auth" \
+          --add-flags "--disable-features=Sync" \
+          --add-flags "--no-proxy-server" \
+          --add-flags "--user-data-dir ~/.config/Code-Isolated"
+      '';
   });
-in
-{
+in {
   config = lib.mkIf config.modules.dev.tools.enable {
-
     # FIX: Use lib.lowPrio to resolve file conflicts with VSCodium
-    home.packages = [ (lib.lowPrio vscodePrivate) ];
+    home.packages = [(lib.lowPrio vscodePrivate)];
 
     xdg.configFile."Code-Isolated/User/settings.json" = {
       source = pkgs.writeText "vscode-settings.json" (builtins.toJSON vscodeSettings);

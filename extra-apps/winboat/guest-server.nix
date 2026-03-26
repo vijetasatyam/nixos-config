@@ -33,6 +33,6 @@ buildGoModule {
       rexies
       ppom
     ];
-    platforms = [ "x86_64-windows" ];
+    platforms = ["x86_64-windows"];
   };
 }

@@ -15,9 +15,8 @@
   makeDesktopItem,
   copyDesktopItems,
   nix-update-script,
-  hicolor-icon-theme
+  hicolor-icon-theme,
 }:
-
 buildNpmPackage (final: {
   pname = "winboat";
   version = "0.9.0";
@@ -41,14 +40,14 @@ buildNpmPackage (final: {
     hicolor-icon-theme
   ];
 
-  buildInputs = [ udev ];
+  buildInputs = [udev];
 
   env.ELECTRON_SKIP_BINARY_DOWNLOAD = 1;
   npmDepsHash = "sha256-DLkI9a030uM2X1et94e4nd/HEyw5ugtK8NEAn/J8p9U=";
   nodejs = nodejs;
   makeCacheWritable = true;
 
-  guest-server = pkgsCross.mingwW64.callPackage ./guest-server.nix { };
+  guest-server = pkgsCross.mingwW64.callPackage ./guest-server.nix {};
   passthru = {
     guest-server = final.guest-server;
     updateScript = nix-update-script {
@@ -89,13 +88,13 @@ buildNpmPackage (final: {
       --add-flag "$out/share/winboat/resources/app.asar" \
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}" \
       --suffix PATH : ${
-        lib.makeBinPath [
-          usbutils
-          docker-compose
-          podman-compose
-          freerdp
-        ]
-      }
+      lib.makeBinPath [
+        usbutils
+        docker-compose
+        podman-compose
+        freerdp
+      ]
+    }
 
     runHook postInstall
   '';
@@ -108,7 +107,7 @@ buildNpmPackage (final: {
       exec = "winboat %U";
       terminal = false;
       icon = "winboat";
-      categories = [ "Utility" ];
+      categories = ["Utility"];
     })
   ];
 
@@ -122,6 +121,6 @@ buildNpmPackage (final: {
       rexies
       ppom
     ];
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
   };
 })

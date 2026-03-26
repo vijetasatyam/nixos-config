@@ -3,9 +3,7 @@
   # pkgs,
   # lib,
   ...
-}:
-
-{
+}: {
   # --- Bootloader ---
   boot.loader.systemd-boot.enable = false; # Explicitly disable the old one
   boot.loader.efi.canTouchEfiVariables = true;

@@ -1,9 +1,8 @@
 {
   # config,
   # pkgs,
-  ... }:
-
-{
+  ...
+}: {
   programs.zsh = {
     enable = true;
     enableCompletion = true;
@@ -13,7 +12,7 @@
     # Oh My Zsh (The framework for plugins/themes)
     oh-my-zsh = {
       enable = true;
-      plugins = [ "git" "sudo" "docker" "kubectl" ];
+      plugins = ["git" "sudo" "docker" "kubectl"];
       theme = "robbyrussell"; # The classic default. Try "agnoster" or "powerlevel10k" later if you want.
     };
 

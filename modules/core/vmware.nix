@@ -3,9 +3,7 @@
   lib,
   pkgs,
   ...
-}:
-
-{
+}: {
   options.modules.vmware.enable = lib.mkEnableOption "VMware Guest Services";
 
   config = lib.mkIf config.modules.vmware.enable {

@@ -3,10 +3,7 @@
   # pkgs,
   # lib,
   ...
-}:
-
-{
-
+}: {
   # User and Accounts.
 
   users.users = {
@@ -27,14 +24,13 @@
 
   security.sudo.extraRules = [
     {
-      users = [ "alice" ];
+      users = ["alice"];
       commands = [
         {
           command = "ALL";
-          options = [ "NOPASSWD" ];
+          options = ["NOPASSWD"];
         }
       ];
     }
   ];
-
 }

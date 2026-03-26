@@ -1,6 +1,8 @@
-{ pkgs, pkgs-unstable, ... }:
-
 {
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   # This adds winboat to the pkgs collection so you can use it anywhere
   nixpkgs.overlays = [
     (final: prev: {

@@ -3,9 +3,7 @@
   pkgs,
   lib,
   ...
-}:
-
-{
+}: {
   options.modules.core.flatpak = {
     enable = lib.mkOption {
       type = lib.types.bool;

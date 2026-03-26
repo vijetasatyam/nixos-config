@@ -15,21 +15,22 @@ trap 'rm -f ./result' EXIT
 
 # --- 1. Preparation ---
 echo -e "${BLUE}🚀 Starting NixOS Flake Rebuild...${NC}"
-# Navigate to the directory containing the flake
 cd ~/nixos-config/flake || exit
 
 if [[ -n $(git status -s) ]]; then
     echo -e "${YELLOW}📝 Notice:${NC} Uncommitted changes found."
-    git status -s
+    git status -v # Verbose git status
 fi
 
 # --- 2. Building (Flake) ---
-echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-# Using .#nixos because we are already in the /flake directory
-if ! sudo nixos-rebuild build --flake .#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"; then
+echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation (Verbose)...${NC}"
+
+# REMOVED: grep filter that was hiding output
+# ADDED: --show-trace for maximum error detail
+# ADDED: --print-build-logs to see everything Nix is doing
+if ! sudo nixos-rebuild build --flake /home/alice/nixos-config/flake#nixos --show-trace --print-build-logs 2>&1 | tee $LOG_FILE; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
-    # Show the actual error lines from the log
-    grep -i "error:" $LOG_FILE | tail -n 10
+    echo -e "${YELLOW}Full log available at: $LOG_FILE${NC}"
     exit 1
 fi
 
@@ -38,11 +39,13 @@ echo -e "\n${BLUE}🔍 Step 2: Comprehensive Diff Analysis${NC}"
 
 echo -e "\n${CYAN}[1/3] Version Changes (nvd):${NC}"
 echo -e "${YELLOW}--------------------------------------------------${NC}"
-nvd diff /run/current-system ./result | grep -- "->" || nvd diff /run/current-system ./result | grep -E "Added packages:|Removed packages:" || echo "No package version changes."
+# Removed grep to show the full nvd output
+nvd diff /run/current-system ./result || echo "No package version changes."
 echo -e "${YELLOW}--------------------------------------------------${NC}"
 
 echo -e "\n${CYAN}[2/3] Env & Derivation Changes (nix-diff):${NC}"
-nix-diff --color always --environment /run/current-system ./result | grep -E "^(\s*)[\+\-]" | grep -v "DEFAULT=" || echo "  No significant environment changes."
+# Removed grep to show the full nix-diff output
+nix-diff --color always --environment /run/current-system ./result || echo "  No environment changes."
 
 echo -e "\n${CYAN}[3/3] Closure Size Comparison:${NC}"
 old_size=$(du -shL /run/current-system 2>/dev/null | awk '{print $1}')
@@ -57,23 +60,26 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 5. Applying the Switch
     echo -e "${CYAN}⚙️ Step 3: Activating...${NC}"
-    sudo nixos-rebuild switch --flake .#nixos --quiet
+    # Removed --quiet so you see the activation logs
+    sudo nixos-rebuild switch --flake /home/alice/nixos-config/flake#nixos
 
     # 6. Gate 2: Git Commit
     if [ -d ../.git ]; then
-        # Fast generation extraction
         gen=$(ls -l /nix/var/nix/profiles/system | grep -Eo 'system-[0-9]+-link' | tail -1 | grep -Eo '[0-9]+')
 
-        # --- Auto-Formatting Phase ---
         echo -e "\n${CYAN}🧹 Formatting .nix files with Alejandra...${NC}"
-        # Formatting from the root of the config
         cd ..
-        nix run nixpkgs#alejandra -- --quiet .
+        # Removed --quiet
+        nix run nixpkgs#alejandra -- .
         git add .
 
         if git diff --cached --quiet; then
             echo -e "${YELLOW}⏭️ Nothing to commit, working tree clean.${NC}"
         else
+            # Show exactly what is being committed
+            echo -e "${CYAN}📄 Staged changes for commit:${NC}"
+            git diff --cached --stat
+
             echo -ne "\n${YELLOW}💾 Commit changes locally? [y/N] ${NC}"
             read -r commit_confirm
 
@@ -83,15 +89,15 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                 read -r custom_msg
                 commit_msg=${custom_msg:-$default_msg}
 
-                if git commit -S -m "$commit_msg"; then
-                    echo -e "${GREEN}✔ Committed with message: \"$commit_msg\"${NC}"
+                # Git commit with verbose output
+                if git commit -v -S -m "$commit_msg"; then
+                    echo -e "${GREEN}✔ Committed successfully.${NC}"
 
-                    # 7. Gate 3: Push (Updated for Dual Remotes)
-                    echo -ne "${BLUE}📡 Checking remotes... ${NC}"
-                    git fetch --quiet github main &
-                    git fetch --quiet codeberg main &
-                    wait
-                    echo -e "${GREEN}Done${NC}"
+                    # 7. Gate 3: Push
+                    echo -ne "${BLUE}📡 Syncing remotes... ${NC}"
+                    # Fetching without --quiet to see network progress
+                    git fetch github main
+                    git fetch codeberg main
 
                     AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
                     AHEAD_CODEBERG=$(git rev-list --count codeberg/main..HEAD 2>/dev/null || echo 0)
@@ -103,7 +109,7 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                         read -p "🌍 Push to Remotes? [y/N] " push_confirm
 
                         if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] ]]; then
-                            echo -e "${BLUE}📡 Syncing remotes...${NC}"
+                            # Pushing with full output
                             git push github main && git push codeberg main
                             echo -e "${GREEN}✅ Remotes updated.${NC}"
                         else

@@ -3,9 +3,7 @@
   pkgs,
   lib,
   ...
-}:
-
-{
+}: {
   options.modules.core.containers = {
     enable = lib.mkOption {
       type = lib.types.bool;
@@ -15,7 +13,6 @@
   };
 
   config = lib.mkIf config.modules.core.containers.enable {
-
     # --- 1. Real Docker (System-wide Daemon) ---
     virtualisation.docker = {
       enable = true;

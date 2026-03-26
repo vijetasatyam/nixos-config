@@ -2,9 +2,7 @@
   # config,
   pkgs,
   ...
-}:
-
-{
+}: {
   # Programs and Packages.
 
   # List packages installed in system profile. To search, run:
@@ -23,14 +21,12 @@
     nvd
     nvdtools
     nix-diff
-
   ];
 
   # Program specific settings and services.
 
   # Firefox.
   programs.firefox = {
-
     enable = true;
     policies = {
       DisableTelemetry = true;

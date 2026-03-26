@@ -2,9 +2,7 @@
   # config,
   # pkgs,
   ...
-}:
-
-{
+}: {
   imports = [
     # --- Machine Specific ---
     ./hardware-configuration.nix

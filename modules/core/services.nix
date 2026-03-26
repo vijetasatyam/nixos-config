@@ -3,9 +3,7 @@
   # pkgs,
   lib,
   ...
-}:
-
-{
+}: {
   # 1. Define the Option (Defaulting to TRUE)
   options = {
     modules.core.services = {
@@ -19,7 +17,6 @@
 
   # 2. The Logic (Only runs if enabled)
   config = lib.mkIf config.modules.core.services.enable {
-
     # Universal Secret Storage
     services.dbus.enable = true;
     services.gnome.gnome-keyring.enable = true;

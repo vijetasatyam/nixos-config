@@ -3,9 +3,7 @@
   # pkgs,
   # lib,
   ...
-}:
-
-{
+}: {
   # Networking and Firewall.
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -23,5 +21,4 @@
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
-
 }

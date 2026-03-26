@@ -1,9 +1,12 @@
-{ config, pkgs, lib, pkgs-unstable, ... }:
-
 {
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: {
   # Only enable if the master dev-tools switch is on
   config = lib.mkIf config.modules.dev.tools.enable {
-
     # 1. Neovim Package & Dependencies
     programs.neovim = {
       enable = true;
@@ -20,12 +23,12 @@
         gnumake
 
         # Tools for Telescope / Grepping
-        tree-sitter       # tree-sitter-cli
-        lazygit           # lazygit integration
-        fzf               # fzf (v0.25+)
-        ripgrep           # live grep
-        fd                # find files
-        curl              # completion engine download
+        tree-sitter # tree-sitter-cli
+        lazygit # lazygit integration
+        fzf # fzf (v0.25+)
+        ripgrep # live grep
+        fd # find files
+        curl # completion engine download
 
         # Language Servers (Optional - you can also use Mason inside Neovim)
         pkgs-unstable.nixd

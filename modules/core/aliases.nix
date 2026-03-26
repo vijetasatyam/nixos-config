@@ -3,19 +3,17 @@
   # pkgs,
   # lib,
   ...
-}:
-
-{
+}: {
   environment.shellAliases = {
     # --- System Management ---
     rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
-    revert  = "bash ~/nixos-config/scripts/revert.sh";
-    clean   = "bash ~/nixos-config/scripts/clean.sh";
+    revert = "bash ~/nixos-config/scripts/revert.sh";
+    clean = "bash ~/nixos-config/scripts/clean.sh";
 
     # Dry-run to check for errors before applying
-    check   = "sudo nixos-rebuild dry-activate";
+    check = "sudo nixos-rebuild dry-activate";
     # List all system generations
-    gen     = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
+    gen = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
 
     # Garbage Collection & Optimization
     nix-clean = "sudo nix-collect-garbage -d && sudo nix-store --optimise -v";
@@ -40,10 +38,10 @@
     codium-isolated = "vscodium --user-data-dir ~/.config/VSCodium-Isolated";
 
     # --- Quality of Life ---
-    ls    = "ls --color=auto";
-    ll    = "ls -l";
-    grep  = "grep --color=auto";
-    ".."  = "cd ..";
+    ls = "ls --color=auto";
+    ll = "ls -l";
+    grep = "grep --color=auto";
+    ".." = "cd ..";
     "..." = "cd ../..";
   };
 

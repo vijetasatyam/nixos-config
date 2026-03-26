@@ -3,9 +3,7 @@
   pkgs,
   lib,
   ...
-}:
-
-{
+}: {
   imports = [
     ./containers.nix
     ./winboat.nix

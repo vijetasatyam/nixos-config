@@ -1,6 +1,10 @@
-{ config, pkgs, lib, pkgs-unstable, ... }:
-
 {
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: {
   # 1. Imports (The Hub)
   # Importing these here makes this file the "Parent" of the dev suite.
   # You can remove these imports from home.nix if you want to keep home.nix clean.
@@ -23,7 +27,6 @@
 
   # 3. The Configuration (Only runs if enable = true)
   config = lib.mkIf config.modules.dev.tools.enable {
-
     # Packages
     home.packages = [
       # Stable

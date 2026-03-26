@@ -1,6 +1,8 @@
-{ pkgs, pkgs-unstable, ... }:
-
 {
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   # 1. Install Terminal Packages
   home.packages = with pkgs; [
     # The Terminal itself (Unstable for latest features)

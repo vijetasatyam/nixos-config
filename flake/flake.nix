@@ -15,38 +15,43 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, ... }@inputs:
-    let
-      system = "x86_64-linux";
+  outputs = {
+    self,
+    nixpkgs,
+    nixpkgs-unstable,
+    home-manager,
+    ...
+  } @ inputs: let
+    system = "x86_64-linux";
 
-      # THE FIX: Instantiate unstable exactly ONCE to save massive amounts of RAM
-      pkgs-unstable = import nixpkgs-unstable {
+    # THE FIX: Instantiate unstable exactly ONCE to save massive amounts of RAM
+    pkgs-unstable = import nixpkgs-unstable {
+      inherit system;
+      config.allowUnfree = true;
+    };
+  in {
+    nixosConfigurations = {
+      nixos = nixpkgs.lib.nixosSystem {
         inherit system;
-        config.allowUnfree = true;
-      };
-    in {
-      nixosConfigurations = {
-        nixos = nixpkgs.lib.nixosSystem {
-          inherit system;
 
-          # Pass the single instance down
-          specialArgs = { inherit inputs pkgs-unstable; };
+        # Pass the single instance down
+        specialArgs = {inherit inputs pkgs-unstable;};
 
-          modules = [
-            ../hosts/nixos/configuration.nix
+        modules = [
+          ../hosts/nixos/configuration.nix
 
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
 
-              # Pass the same single instance to Home Manager
-              home-manager.extraSpecialArgs = { inherit inputs pkgs-unstable; };
+            # Pass the same single instance to Home Manager
+            home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable;};
 
-              home-manager.users.alice = import ../modules/home/home.nix;
-            }
-          ];
-        };
+            home-manager.users.alice = import ../modules/home/home.nix;
+          }
+        ];
       };
     };
+  };
 }

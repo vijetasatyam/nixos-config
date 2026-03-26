@@ -3,9 +3,7 @@
   pkgs,
   #pkgs-unstable,
   ...
-}:
-
-{
+}: {
   home.username = "alice";
   home.homeDirectory = "/home/alice";
 

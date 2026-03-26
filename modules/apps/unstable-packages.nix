@@ -3,9 +3,7 @@
   # pkgs,
   pkgs-unstable,
   ...
-}:
-
-{
+}: {
   environment.systemPackages = [
     # Obsidian works great from unstable
     pkgs-unstable.obsidian
