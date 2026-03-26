@@ -24,7 +24,7 @@ fi
 
 # --- 2. Building (Flake) ---
 echo -e "\n${CYAN}📦 Step 1: Building new NixOS generation...${NC}"
-if ! sudo nixos-rebuild build --flake ./flake#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"; then
+if ! sudo nixos-rebuild build --flake /home/alice/nixos-config/flake#nixos 2>&1 | tee $LOG_FILE | grep -E "error:|failed"; then
     echo -e "\n${RED}━━━━━━━━━━━━━━ BUILD FAILED ━━━━━━━━━━━━━━${NC}"
     grep -i "error:" $LOG_FILE | tail -n 10
     exit 1
