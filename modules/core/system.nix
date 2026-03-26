@@ -6,10 +6,23 @@
 }:
 
 {
-  # Bootloader
-  boot.loader.systemd-boot.enable = true;
+  # --- Bootloader ---
+  boot.loader.systemd-boot.enable = false; # Explicitly disable the old one
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Enable rEFInd
+  boot.loader.refind.enable = true;
+
+  # THE FIX: Explicitly disable GRUB to stop the "Failed assertions" error
+  boot.loader.grub.enable = false;
+
+  # Add a timeout so you can see the menu (default is often 0 or 1)
+  boot.loader.timeout = 10;
+  # # Bootloader
+  # # boot.loader.systemd-boot.enable = true;
+  # boot.loader.efi.canTouchEfiVariables = true;
+  # boot.loader.grub.enable = false;
+  # boot.loader.refind.enable = true;
   # Timezone (Keeping physical location correct)
   time.timeZone = "Asia/Kolkata";
 

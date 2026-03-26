@@ -29,7 +29,7 @@
             name = vijetasatyam
             email = vijetasatyam@gmail.com
             # YOUR BRAND NEW KEY ID
-            signingkey = 84CCFF76E30A0E07C9C256EB0C343897BCCA0280
+            signingkey = 6D6783A58A88C6D07F9D2A6BDF58C829520F1B07
 
           [commit]
             gpgsign = true
