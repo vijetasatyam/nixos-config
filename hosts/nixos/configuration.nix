@@ -1,27 +1,17 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
 {
   # config,
   # pkgs,
-  # lib,
   ...
 }:
 
 {
-  # Imports.
-
   imports = [
     # --- Machine Specific ---
     ./hardware-configuration.nix
 
-    # --- Application Modules ---
-    ../../modules/apps/env-packages.nix
-    ../../modules/apps/unstable-packages.nix
-
-    # --- Core Modules ---
+    # --- Core System Modules ---
     ../../modules/core/aliases.nix
+    ../../modules/core/extra-config.nix
     ../../modules/core/flathub.nix
     ../../modules/core/networking.nix
     ../../modules/core/services.nix
@@ -29,17 +19,20 @@
     ../../modules/core/users.nix
     ../../modules/core/vmware.nix
 
-    # --- Development Modules ---
-    ../../modules/dev/development-tools.nix
-    ../../modules/dev/git-config.nix
-    ../../modules/dev/virtual-machines.nix
+    # --- NEW: System Restrictions (Hosts file blocking) ---
+    ../../modules/core/blocklist.nix
 
+    # --- Application Modules (System Wide) ---
+    ../../modules/apps/env-packages.nix
+    ../../modules/apps/unstable-packages.nix
+
+    # --- System-Level Dev Modules (VMs, Docker, Winboat) ---
+    # NOTE: These MUST stay in system config, they use virtualisation.* options
+    ../../modules/dev/dev-tools.nix
+    ../../modules/dev/virtual-machines.nix
+    # ../../modules/dev/winboat.nix
   ];
 
-modules.vmware.enable = true;
-
-  # Channels.
-
-  system.stateVersion = "25.11";
-
+  # Enable VMware Guest modules if needed
+  modules.vmware.enable = true;
 }

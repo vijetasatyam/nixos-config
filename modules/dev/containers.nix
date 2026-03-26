@@ -43,11 +43,11 @@
     # --- 4. The "Engine Switcher" Logic ---
     # This sets up the default behavior and gives you easy commands to swap
     environment.extraInit = ''
-    # Set default DOCKER_HOST to Podman's rootless socket
-    # We use a check to ensure XDG_RUNTIME_DIR is set (usually is on login)
-      if [ -n "$XDG_RUNTIME_DIR" ]; then
-        export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
-      fi
+      # Set default DOCKER_HOST to Podman's rootless socket
+      # We use a check to ensure XDG_RUNTIME_DIR is set (usually is on login)
+        if [ -n "$XDG_RUNTIME_DIR" ]; then
+          export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
+        fi
     '';
 
     # --- 5. System Permissions ---
