@@ -11,6 +11,27 @@
   # Enable rEFInd
   boot.loader.refind.enable = true;
 
+  boot.loader.refind.extraConfig = ''
+    # --- 1. Clean up the Boot Menu ---
+    # Hide messy fallback files and firmware updaters
+    dont_scan_files BOOTX64.EFI, fwupx64.efi, fwupdx64.efi, mmx64.efi
+
+    # Hide extra directories that cause duplicate/broken icons
+    dont_scan_dirs EFI/BOOT, EFI/nixos
+
+    # --- 2. Clean up the Tool Row ---
+    # Only show essential tools at the bottom: Reboot, Shutdown, BIOS/Firmware
+    showtools reboot, shutdown, firmware
+
+    # --- 3. Graphics & Theming ---
+    # Force high resolution
+    resolution max
+    use_graphics_for windows, linux
+
+    # Load the custom theme (we will download this in Step 2)
+    include themes/refind-theme-regular/theme.conf
+  '';
+
   # THE FIX: Explicitly disable GRUB to stop the "Failed assertions" error
   boot.loader.grub.enable = false;
 
