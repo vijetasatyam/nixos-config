@@ -86,10 +86,20 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
     wait $switch_pid
     echo -e "${GREEN}✔ System Activated${NC}"
 
-    # --- ☢️ THE NUCLEAR rEFInd SCRUB ☢️ ---
-    # Silently remove the unwanted NixOS defaults appended to the file
+# --- ☢️ THE NUCLEAR rEFInd SCRUB ☢️ ---
+    # 1. Silently remove the unwanted NixOS defaults
     sudo sed -i '/^default_selection 2$/d' /boot/EFI/refind/refind.conf 2>/dev/null || true
     sudo sed -i '/^timeout 5$/d' /boot/EFI/refind/refind.conf 2>/dev/null || true
+
+    # 2. Inject the "Latest" icon (Added sudo to the awk read)
+    # We write to a temp file, then stream it back with sudo tee
+    sudo awk '/menuentry "NixOS/ && !done { print; print "  icon /EFI/custom-themes/refind-theme-regular/icons/128-48/os_nixos_latest.png"; done=1; next } 1' /boot/EFI/refind/refind.conf > /tmp/refind.conf.tmp
+
+    # Safety Check: Only overwrite if the temp file isn't empty!
+    if [ -s /tmp/refind.conf.tmp ]; then
+        cat /tmp/refind.conf.tmp | sudo tee /boot/EFI/refind/refind.conf > /dev/null
+    fi
+    rm -f /tmp/refind.conf.tmp
     # ----------------------------------------
 
     # 5. Gate 2: Git Commit
