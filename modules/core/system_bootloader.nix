@@ -3,12 +3,12 @@
   # pkgs,
   # lib,
   ...
-}: {
+}:
+{
   # --- 1. Bootloader Configuration ---
   boot.loader.systemd-boot.enable = false; # Explicitly disable the old one
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.grub.enable = false; # Prevent conflicts
-  boot.loader.timeout = 10; # System-level timeout
 
   # Enable rEFInd
   boot.loader.refind.enable = true;
@@ -17,7 +17,7 @@
     # --- 1. Clean UI & Selection ---
     # Sets the 3rd icon as the default choice automatically
     default_selection 3
-    # Wait 5 seconds before auto-booting inside rEFInd
+    # Wait 10 seconds before auto-booting inside rEFInd
     timeout 10
 
     # --- 2. Graphics Mode ---
