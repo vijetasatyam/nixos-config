@@ -3,7 +3,8 @@
   # pkgs,
   # lib,
   ...
-}: {
+}:
+{
   # --- Bootloader ---
   boot.loader.systemd-boot.enable = false; # Explicitly disable the old one
   boot.loader.efi.canTouchEfiVariables = true;
@@ -12,23 +13,21 @@
   boot.loader.refind.enable = true;
 
   boot.loader.refind.extraConfig = ''
-    # --- 1. Clean up the Boot Menu ---
-    # Hide messy fallback files and firmware updaters
-    dont_scan_files BOOTX64.EFI, fwupx64.efi, fwupdx64.efi, mmx64.efi
+    # --- 1. Force Graphics Mode ---
+    textonly false
+    # Use standard 1080p to prevent UEFI crashes. Change to match your laptop if different.
+    resolution 1920 1080
 
-    # Hide extra directories that cause duplicate/broken icons
-    dont_scan_dirs EFI/BOOT, EFI/nixos
+    # --- 2. Clean up duplicates & messy files ---
+    # Stops it from auto-finding the systemd-boot files
+    dont_scan_dirs EFI/systemd, EFI/BOOT
+    dont_scan_files systemd-bootx64.efi, BOOTX64.EFI
 
-    # --- 2. Clean up the Tool Row ---
-    # Only show essential tools at the bottom: Reboot, Shutdown, BIOS/Firmware
+    # --- 3. Clean up the Tool Row ---
+    # Define exact tools to prevent the double-listing
     showtools reboot, shutdown, firmware
 
-    # --- 3. Graphics & Theming ---
-    # Force high resolution
-    resolution max
-    use_graphics_for windows, linux
-
-    # Load the custom theme (we will download this in Step 2)
+    # --- 4. The Theme ---
     include themes/refind-theme-regular/theme.conf
   '';
 
