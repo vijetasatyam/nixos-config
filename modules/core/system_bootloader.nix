@@ -14,6 +14,8 @@
   boot.loader.refind.maxGenerations = 5;
 
   boot.loader.refind.extraConfig = ''
+    default_selection 3
+    timeout 10
     textonly false
     resolution 1920 1080
     dont_scan_dirs EFI/systemd, EFI/BOOT
