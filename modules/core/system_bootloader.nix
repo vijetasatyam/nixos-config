@@ -43,5 +43,4 @@
 
     font /EFI/custom-themes/refind-theme-regular/fonts/source-code-pro-extralight-14.png
   '';
-  
 }
