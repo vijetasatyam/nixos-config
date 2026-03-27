@@ -6,7 +6,7 @@
 }:
 {
   # --- Bootloader ---
-  import = [ ./system_bootloader.nix ];
+  imports = [ ./system_bootloader.nix ];
 
   # Timezone (Keeping physical location correct)
   time.timeZone = "Asia/Kolkata";
