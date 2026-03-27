@@ -24,19 +24,16 @@
     # --- 3. Clean up the Tool Row ---
     showtools reboot, shutdown, firmware
 
-    # --- 4. The Theme (Directly Integrated) ---
-    # We no longer use "include" because NixOS deletes the separate file.
-    # Instead, we define the theme settings directly here:
-    icons_dir themes/refind-theme-regular/icons/128-48
+    # --- 4. The Theme (Pointing to the Safe Zone) ---
+    icons_dir /EFI/custom-themes/refind-theme-regular/icons/128-48
     big_icon_size 128
     small_icon_size 48
 
-    # You can change these to bg_dark.png and selection_dark... for the dark theme variant
-    banner themes/refind-theme-regular/icons/128-48/bg.png
-    selection_big themes/refind-theme-regular/icons/128-48/selection-big.png
-    selection_small themes/refind-theme-regular/icons/128-48/selection-small.png
+    banner /EFI/custom-themes/refind-theme-regular/icons/128-48/bg.png
+    selection_big /EFI/custom-themes/refind-theme-regular/icons/128-48/selection-big.png
+    selection_small /EFI/custom-themes/refind-theme-regular/icons/128-48/selection-small.png
 
-    font themes/refind-theme-regular/fonts/source-code-pro-extralight-14.png
+    font /EFI/custom-themes/refind-theme-regular/fonts/source-code-pro-extralight-14.png
   '';
 
   # THE FIX: Explicitly disable GRUB to stop the "Failed assertions" error
