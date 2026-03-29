@@ -1,17 +1,22 @@
-{ config, pkgs, ... }: {
+{
+  # config,
+  # pkgs,
+  ...
+}:
+{
   systemd.services.autonix = {
     description = "Autonix Background Daemon";
-    
+
     # Start automatically on boot
     wantedBy = [ "multi-user.target" ];
-    
+
     # Wait for the network to be up before starting (if autonix needs internet)
     after = [ "network.target" ];
 
     serviceConfig = {
       # The absolute path to your binary
       ExecStart = "/home/alice/.local/bin/autonix";
-      
+
       # Run it as your user so it has the right permissions
       User = "alice";
       Group = "users";
