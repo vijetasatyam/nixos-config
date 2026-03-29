@@ -15,6 +15,8 @@
     ./dev/development-tools.nix
     ./dev/terminal.nix
     ./dev/zsh.nix
+    ./dev/bash.nix
+    ./dev/starship.nix
   ];
 
   # General User Packages
