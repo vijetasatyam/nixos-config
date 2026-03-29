@@ -2,16 +2,15 @@
   # config,
   # pkgs,
   ...
-}:
-{
+}: {
   systemd.services.autonix = {
     description = "Autonix Background Daemon";
 
     # Start automatically on boot
-    wantedBy = [ "multi-user.target" ];
+    wantedBy = ["multi-user.target"];
 
     # Wait for the network to be up before starting (if autonix needs internet)
-    after = [ "network.target" ];
+    after = ["network.target"];
 
     serviceConfig = {
       # The absolute path to your binary
