@@ -24,34 +24,36 @@
   } @ inputs: let
     system = "x86_64-linux";
 
-    # THE FIX: Instantiate unstable exactly ONCE to save massive amounts of RAM
+    # 1. Define a shared config block
+    shared-config = {
+      allowUnfree = true;
+    };
+
+    # 2. Apply it to the Unstable instance
     pkgs-unstable = import nixpkgs-unstable {
       inherit system;
-      config.allowUnfree = true;
+      config = shared-config; # Centralized here
     };
   in {
-    nixosConfigurations = {
-      nixos = nixpkgs.lib.nixosSystem {
-        inherit system;
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = {inherit inputs pkgs-unstable;};
+      modules = [
+        ../hosts/nixos/configuration.nix
+        # 3. Apply it to the Stable instance via a module
+        {nixpkgs.config = shared-config;} # Centralized here
 
-        # Pass the single instance down
-        specialArgs = {inherit inputs pkgs-unstable;};
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
 
-        modules = [
-          ../hosts/nixos/configuration.nix
+          # Pass the same single instance to Home Manager
+          home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable;};
 
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-
-            # Pass the same single instance to Home Manager
-            home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable;};
-
-            home-manager.users.alice = import ../modules/home/home.nix;
-          }
-        ];
-      };
+          home-manager.users.alice = import ../modules/home/home.nix;
+        }
+      ];
     };
   };
 }

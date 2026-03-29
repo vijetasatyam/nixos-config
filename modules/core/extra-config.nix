@@ -5,15 +5,14 @@
 }: {
   # --- 1. Nix Settings ---
   nix.settings = {
-    experimental-features = ["nix-command" "flakes"];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
     auto-optimise-store = true;
 
     # Prevent "Buffer Full" warning
     download-buffer-size = 536870912;
-
-    # SAVE RAM & CPU: Limit concurrent build jobs
-    max-jobs = 1;
-    cores = 0;
   };
 
   # --- 2. Garbage Collection ---
