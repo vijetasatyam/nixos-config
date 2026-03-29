@@ -1,32 +1,47 @@
 {
   # config,
-  # pkgs,
+  pkgs,
   ...
-}: {
+}:
+{
   programs.zsh = {
     enable = true;
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
 
-    # Oh My Zsh (The framework for plugins/themes)
+    # Oh My Zsh (The framework for plugins)
     oh-my-zsh = {
       enable = true;
-      plugins = ["git" "sudo" "docker" "kubectl"];
-      theme = "robbyrussell"; # The classic default. Try "agnoster" or "powerlevel10k" later if you want.
+      plugins = [
+        "git"
+        "sudo"
+        "docker"
+        "kubectl"
+      ];
+      # We intentionally leave the theme blank here so Starship can take over!
     };
 
     # Aliases (These override system aliases if conflicts exist)
     shellAliases = {
-      ll = "ls -l";
-      update = "sudo nixos-rebuild switch --flake ~/nixos-config#nixos";
+      # Visual upgrades using packages you already have
+      ls = "eza --icons --group-directories-first";
+      ll = "eza -al --icons --group-directories-first";
+      cat = "bat --style=plain";
+
+      # System Management
+      rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
+      update = "cd ~/nixos-config/flake && nix flake update && rebuild";
+
+      # The Unstable Shell shortcut
+      ush = "nix shell github:nixos/nixpkgs/nixos-unstable#$1 --impure";
 
       # Quick navigation
       ".." = "cd ..";
       "..." = "cd ../..";
       ".3" = "cd ../../..";
 
-      # Git shortcuts
+      # Git shortcuts (Preserved exactly as you had them)
       g = "git";
       ga = "git add";
       gc = "git commit";
@@ -34,9 +49,10 @@
     };
 
     # Extra Config (e.g. init scripts)
-    initContent = ''
+    # Changed from 'initContent' to 'initExtra' to ensure Home Manager injects it perfectly
+    initExtra = ''
       # fastfetch on start
-      fastfetch
+      ${pkgs.fastfetch}/bin/fastfetch
     '';
   };
 }
