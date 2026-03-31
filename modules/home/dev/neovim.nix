@@ -41,78 +41,78 @@
       ];
     };
 
-    # 2. Bootstrap Lazy.nvim
-    # This Lua block checks if lazy is installed, clones it if not, and loads your config.
-    xdg.configFile."nvim/init.lua".text = ''
-      -- Bootstrap lazy.nvim
-      local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-      if not vim.loop.fs_stat(lazypath) then
-        vim.fn.system({
-          "git",
-          "clone",
-          "--filter=blob:none",
-          "https://github.com/folke/lazy.nvim.git",
-          "--branch=stable", -- latest stable release
-          lazypath,
-        })
-      end
-      vim.opt.rtp:prepend(lazypath)
+    # # 2. Bootstrap Lazy.nvim
+    # # This Lua block checks if lazy is installed, clones it if not, and loads your config.
+    # xdg.configFile."nvim/init.lua".text = ''
+    #   -- Bootstrap lazy.nvim
+    #   local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+    #   if not vim.loop.fs_stat(lazypath) then
+    #     vim.fn.system({
+    #       "git",
+    #       "clone",
+    #       "--filter=blob:none",
+    #       "https://github.com/folke/lazy.nvim.git",
+    #       "--branch=stable", -- latest stable release
+    #       lazypath,
+    #     })
+    #   end
+    #   vim.opt.rtp:prepend(lazypath)
 
-      -- Basic Settings before loading plugins
-      vim.g.mapleader = " " -- Make sure to set this before lazy setup
-      vim.g.maplocalleader = " "
+    #   -- Basic Settings before loading plugins
+    #   vim.g.mapleader = " " -- Make sure to set this before lazy setup
+    #   vim.g.maplocalleader = " "
 
-      vim.opt.number = true
-      vim.opt.relativenumber = true
-      vim.opt.clipboard = "unnamedplus" -- Sync with system clipboard
+    #   vim.opt.number = true
+    #   vim.opt.relativenumber = true
+    #   vim.opt.clipboard = "unnamedplus" -- Sync with system clipboard
 
-      -- Setup Lazy and load plugins
-      require("lazy").setup({
+    #   -- Setup Lazy and load plugins
+    #   require("lazy").setup({
 
-        -- Example 1: Theme
-        {
-          "dracula/vim",
-          name = "dracula",
-          config = function()
-            vim.cmd("colorscheme dracula")
-          end
-        },
+    #     -- Example 1: Theme
+    #     {
+    #       "dracula/vim",
+    #       name = "dracula",
+    #       config = function()
+    #         vim.cmd("colorscheme dracula")
+    #       end
+    #     },
 
-        -- Example 2: Treesitter (Syntax Highlighting)
-        {
-          "nvim-treesitter/nvim-treesitter",
-          build = ":TSUpdate",
-          config = function()
-            require("nvim-treesitter.configs").setup({
-              ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "nix" },
-              auto_install = false, -- rely on Nix for compilers, but lazy for downloading parsers
-              highlight = { enable = true },
-            })
-          end
-        },
+    #     -- Example 2: Treesitter (Syntax Highlighting)
+    #     {
+    #       "nvim-treesitter/nvim-treesitter",
+    #       build = ":TSUpdate",
+    #       config = function()
+    #         require("nvim-treesitter.configs").setup({
+    #           ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "nix" },
+    #           auto_install = false, -- rely on Nix for compilers, but lazy for downloading parsers
+    #           highlight = { enable = true },
+    #         })
+    #       end
+    #     },
 
-        -- Example 3: Telescope (Fuzzy Finder)
-        {
-          "nvim-telescope/telescope.nvim",
-          tag = "0.1.5",
-          dependencies = { "nvim-lua/plenary.nvim" },
-          keys = {
-            { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
-            { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Grepp" },
-          }
-        },
+    #     -- Example 3: Telescope (Fuzzy Finder)
+    #     {
+    #       "nvim-telescope/telescope.nvim",
+    #       tag = "0.1.5",
+    #       dependencies = { "nvim-lua/plenary.nvim" },
+    #       keys = {
+    #         { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+    #         { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Grepp" },
+    #       }
+    #     },
 
-        -- Example 4: LSP Support
-        {
-          "neovim/nvim-lspconfig",
-          config = function()
-            local lspconfig = require("lspconfig")
-            -- Nixd is installed via Home Manager (extraPackages above)
-            lspconfig.nixd.setup({})
-          end
-        }
+    #     -- Example 4: LSP Support
+    #     {
+    #       "neovim/nvim-lspconfig",
+    #       config = function()
+    #         local lspconfig = require("lspconfig")
+    #         -- Nixd is installed via Home Manager (extraPackages above)
+    #         lspconfig.nixd.setup({})
+    #       end
+    #     }
 
-      })
-    '';
+    #   })
+    # '';
   };
 }
