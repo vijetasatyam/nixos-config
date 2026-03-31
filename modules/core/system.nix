@@ -3,11 +3,11 @@
   # pkgs,
   # lib,
   ...
-}: {
+}:
+{
   # --- Bootloader ---
   imports = [
     ./system_bootloader.nix
-    ./autonix.nix
   ];
 
   # Timezone (Keeping physical location correct)
