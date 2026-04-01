@@ -10,8 +10,8 @@
   ];
 
   # Desktop manager
-  programs.xwayland.enable = true;
-  programs.mango.enable = true;
+  # programs.xwayland.enable = true;
+  # programs.mango.enable = true;
 
   # Timezone (Keeping physical location correct)
   time.timeZone = "Asia/Kolkata";

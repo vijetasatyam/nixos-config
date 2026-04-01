@@ -15,10 +15,10 @@
     };
 
     # 4. MangoWC
-    mango = {
-      url = "github:mangowm/mango";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    #mango = {
+    #  url = "github:mangowm/mango";
+    #  inputs.nixpkgs.follows = "nixpkgs";
+    #};
   };
 
   outputs = {
@@ -26,7 +26,7 @@
     nixpkgs,
     nixpkgs-unstable,
     home-manager,
-    mango,
+    #mango,
     ...
   } @ inputs: let
     system = "x86_64-linux";
@@ -51,7 +51,7 @@
         {nixpkgs.config = shared-config;} # Centralized here
 
         # Enable the official Mango NixOS module
-        mango.nixosModules.mango
+        #mango.nixosModules.mango
 
         home-manager.nixosModules.home-manager
         {

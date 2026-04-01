@@ -12,8 +12,8 @@
     ./dev/development-tools.nix
     ./dev/git-config.nix
     ./dev/terminal.nix
-    ./compositor/mangowc.nix
-    ./compositor/waybar.nix
+    #./compositor/mangowc.nix
+    #./compositor/waybar.nix
   ];
 
   # General User Packages
