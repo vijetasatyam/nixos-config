@@ -3,6 +3,12 @@
   pkgs-unstable,
   ...
 }: {
+  imports = [
+    ./bash.nix
+    ./starship.nix
+    ./zsh.nix
+  ];
+
   # 1. Install Terminal Packages
   home.packages = with pkgs; [
     # The Terminal itself (Unstable for latest features)

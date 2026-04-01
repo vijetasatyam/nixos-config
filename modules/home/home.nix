@@ -9,14 +9,9 @@
 
   # Import User Configs`
   imports = [
-    ./dev/vscode.nix
-    ./dev/vscodium.nix
-    ./dev/git-config.nix
     ./dev/development-tools.nix
+    ./dev/git-config.nix
     ./dev/terminal.nix
-    ./dev/zsh.nix
-    ./dev/bash.nix
-    ./dev/starship.nix
   ];
 
   # General User Packages

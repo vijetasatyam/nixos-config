@@ -15,7 +15,7 @@
     ../../modules/core/services.nix
     ../../modules/core/system.nix
     ../../modules/core/users.nix
-    ../../modules/core/vmware.nix
+    # ../../modules/core/vmware.nix
 
     # --- NEW: System Restrictions (Hosts file blocking) ---
     ../../modules/core/blocklist.nix
@@ -31,6 +31,6 @@
     # ../../modules/dev/winboat.nix
   ];
 
-  # Enable VMware Guest modules if needed
-  modules.vmware.enable = true;
+  # # Enable VMware Guest modules if needed
+  # modules.vmware.enable = true;
 }
