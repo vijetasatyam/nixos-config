@@ -15,10 +15,10 @@
     };
 
     # 4. MangoWC
-        mango = {
-          url = "github:mangowm/mango";
-          inputs.nixpkgs.follows = "nixpkgs";
-        };
+    mango = {
+      url = "github:mangowm/mango";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {

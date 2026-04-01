@@ -1,14 +1,17 @@
-{ pkgs, ... }: {
+{
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   # --- 1. Wayland Tools ---
   home.packages = with pkgs; [
-    
-    pkgs-unstable.mangowc 
-    
-    wmenu         # Native Wayland launcher
-    swaybg        # Wallpaper utility
-    grim          # Screenshot tool
-    slurp         # Region selector
-    wl-clipboard  # Clipboard sync
+    pkgs-unstable.mangowc
+
+    wmenu # Native Wayland launcher
+    swaybg # Wallpaper utility
+    grim # Screenshot tool
+    slurp # Region selector
+    wl-clipboard # Clipboard sync
 
     # Fonts/Icons for aesthetics
     papirus-icon-theme
@@ -16,7 +19,7 @@
   ];
 
   fonts.fontconfig.enable = true;
-  
+
   # --- 2. Mango Configuration ---
   xdg.configFile."mango/config.conf".text = ''
     exec = ~/.config/mango/autostart.sh

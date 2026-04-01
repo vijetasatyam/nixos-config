@@ -1,4 +1,4 @@
-{ ... }: {
+{...}: {
   programs.waybar = {
     enable = true;
     settings.mainBar = {
@@ -7,12 +7,12 @@
       margin = "8 15 0 15";
       height = 36;
 
-      modules-left = [ "custom/os_icon" "wlr/workspaces" ];
-      modules-center = [ "clock" ];
-      modules-right = [ "network" "pulseaudio" "battery" ];
+      modules-left = ["custom/os_icon" "wlr/workspaces"];
+      modules-center = ["clock"];
+      modules-right = ["network" "pulseaudio" "battery"];
 
-      "custom/os_icon" = { format = " ❄️ "; };
-      "clock" = { format = "{:%I:%M %p    %b %d}"; };
+      "custom/os_icon" = {format = " ❄️ ";};
+      "clock" = {format = "{:%I:%M %p    %b %d}";};
     };
 
     style = ''
