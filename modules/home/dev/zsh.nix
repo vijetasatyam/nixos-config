@@ -49,7 +49,7 @@
 
     # Extra Config (e.g. init scripts)
     # Changed from 'initContent' to 'initExtra' to ensure Home Manager injects it perfectly
-    initExtra = ''
+    initContent = ''
       # fastfetch on start
       ${pkgs.fastfetch}/bin/fastfetch
     '';

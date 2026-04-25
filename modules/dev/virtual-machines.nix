@@ -6,7 +6,7 @@
 }: {
   imports = [
     ./containers.nix
-    ./winboat.nix
+    # ./winboat.nix
   ];
 
   options.modules.core.virtualisation = {
