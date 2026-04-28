@@ -5,7 +5,6 @@
   # system,
   ...
 }: {
-
   # Install the Quickshell package directly from the flake input
   home.packages = [
     inputs.quickshell.packages.${pkgs.system}.default

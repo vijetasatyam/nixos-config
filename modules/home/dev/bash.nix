@@ -17,8 +17,6 @@
       ls = "eza --icons --group-directories-first";
       ll = "eza -al --icons --group-directories-first";
       cat = "bat --style=plain";
-      rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
-      update = "cd ~/nixos-config/flake && nix flake update && rebuild";
     };
 
     # Bash-specific options

@@ -13,8 +13,9 @@
     ./dev/git-config.nix
     ./dev/terminal.nix
     ./compositor/niri.nix
-    ./compositor/waybar.nix
-    ./compositor/moko.nix
+    # ./compositor/waybar.nix
+    ./compositor/swaync.nix
+    ./compositor/quickshell.nix
   ];
 
   # General User Packages
@@ -25,7 +26,13 @@
     jq
     eza # Better ls
     bat # Better cat
+    nh
   ];
+
+  # Required for `nh` to work without specifying path every time
+  home.sessionVariables = {
+    FLAKE = "/home/alice/nixos-config";
+  };
 
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;

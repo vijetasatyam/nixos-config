@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  theme,
+  ...
+}: {
   home.packages = with pkgs; [
     fuzzel
     swaybg
@@ -13,82 +17,60 @@
 
   xdg.configFile."niri/config.kdl".text = ''
     input {
-        keyboard { xkb { layout "us"; } }
-        touchpad { tap; natural-scroll; }
+        keyboard {
+            xkb {
+                layout "us"
+            }
+        }
+        touchpad {
+            tap
+            natural-scroll
+        }
     }
 
     layout {
-        gaps 16 // Generous gaps for the floating look
+        gaps 16
         center-focused-column "never"
-
         default-column-width { proportion 0.5; }
 
-        // The Dracula "Rice" Focus Ring
         focus-ring {
             width 4
-            active-color "#bd93f9"   // Dracula Purple
-            inactive-color "#44475a" // Dracula Selection/Invisible
+            active-color "${theme.accent}"   // Dynamic Theme Accent
+            inactive-color "${theme.surface}" // Dynamic Theme Inactive
         }
     }
 
-    // --- The Aesthetics Engine ---
     animations {
-        // Snappy, bouncy spring animations
-        workspace-switch {
-            spring damping-ratio=0.8 stiffness=1000 epsilon=0.0001
-        }
+        workspace-switch { spring damping-ratio=0.8 stiffness=1000 epsilon=0.0001; }
         window-open {
             duration-ms 200
             curve "ease-out-quad"
         }
         window-close {
             duration-ms 200
-            curve "ease-in-quad"
+            curve "ease-out-quad"
         }
     }
 
-    // Apply rounded corners to all windows
-    window-rule {
-        geometry-corner-radius 12
-        clip-to-geometry true
-    }
+    window-rule { geometry-corner-radius 12; clip-to-geometry true; }
+    window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
 
-    // Make utility windows float
-    window-rule {
-        match app-id="pavucontrol"
-        match app-id="mission-center"
-        open-floating true
-    }
-
-    // --- Autostart ---
-    spawn-at-startup "waybar"
-    spawn-at-startup "mako"
-    // PRO TIP: Put a cool Dracula-themed wallpaper here!
-    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/dracula-wallpaper.jpg" "-m" "fill"
+    // 5. Autostart SwayNC instead of Mako
+    spawn-at-startup "quickshell"
+    spawn-at-startup "swaync"
+    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.jpg" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 
-    // --- Keybindings ---
     binds {
         Mod+Return { spawn "ghostty"; }
         Mod+D { spawn "fuzzel"; }
         Mod+Q { close-window; }
-
-        Mod+Left  { focus-column-left; }
-        Mod+Right { focus-column-right; }
-        Mod+Up    { focus-window-up; }
-        Mod+Down  { focus-window-down; }
-
-        Mod+Shift+Left  { move-column-left; }
-        Mod+Shift+Right { move-column-right; }
-        Mod+Shift+Up    { move-window-up; }
-        Mod+Shift+Down  { move-window-down; }
-
-        Mod+Shift+Q { quit; }
+        //  ... (Keep your other binds identical) ...
         Print { spawn "sh" "-c" "grim -g \"$(slurp)\" - | wl-copy"; }
     }
   '';
 
-  # Let's also rice your App Launcher (Fuzzel) to match!
+  # Theme Fuzzel dynamically
   xdg.configFile."fuzzel/fuzzel.ini".text = ''
     [main]
     font=JetBrainsMono Nerd Font:size=12
@@ -101,12 +83,12 @@
     inner-pad=10
 
     [colors]
-    background=282a36ff
-    text=f8f8f2ff
-    match=8be9fdff
-    selection=44475aff
-    selection-text=bd93f9ff
-    border=bd93f9ff
+    background=${builtins.substring 1 6 theme.bg}ff
+    text=${builtins.substring 1 6 theme.text}ff
+    match=${builtins.substring 1 6 theme.active}ff
+    selection=${builtins.substring 1 6 theme.surface}ff
+    selection-text=${builtins.substring 1 6 theme.accent}ff
+    border=${builtins.substring 1 6 theme.accent}ff
 
     [border]
     width=3

@@ -14,11 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # 4. MangoWC
-    #mango = {
-    #  url = "github:mangowm/mango";
-    #  inputs.nixpkgs.follows = "nixpkgs";
-    #};
+    # 4. Quickshell
+    quickshell = {
+      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = {
@@ -26,7 +26,7 @@
     nixpkgs,
     nixpkgs-unstable,
     home-manager,
-    #mango,
+    quickshell,
     ...
   } @ inputs: let
     system = "x86_64-linux";
@@ -41,29 +41,71 @@
       inherit system;
       config = shared-config; # Centralized here
     };
+
+    # NEW: Abstract Themes into Variables (Catppuccin Mocha)
+    theme = {
+      name = "catppuccin-mocha";
+      bg = "#1e1e2e"; # Base
+      text = "#cdd6f4"; # Text
+      accent = "#cba6f7"; # Mauve (Primary Accent)
+      border = "#b4befe"; # Lavender
+      surface = "#313244"; # Surface 1
+      active = "#89b4fa"; # Blue
+      urgent = "#f38ba8"; # Red
+      success = "#a6e3a1"; # Green
+      warning = "#f9e2af"; # Yellow
+    };
   in {
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-      inherit system;
-      specialArgs = {inherit inputs pkgs-unstable;};
-      modules = [
-        ../hosts/nixos/configuration.nix
-        # 3. Apply it to the Stable instance via a module
-        {nixpkgs.config = shared-config;} # Centralized here
+    # NEW: Multi-Host Setup replacing the single nixosConfigurations.nixos
+    nixosConfigurations = {
+      # Host 1: Desktop
+      desktop = nixpkgs.lib.nixosSystem {
+        inherit system;
 
-        # Enable the official Mango NixOS module
-        #mango.nixosModules.mango
+        # Inject 'theme' here for system-level modules
+        specialArgs = {inherit inputs pkgs-unstable theme;};
 
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
+        modules = [
+          # Make sure to rename your 'hosts/nixos' folder to 'hosts/desktop'
+          ../hosts/desktop/configuration.nix
 
-          # Pass the same single instance to Home Manager
-          home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable;};
+          # 3. Apply it to the Stable instance via a module
+          {nixpkgs.config = shared-config;} # Centralized here
 
-          home-manager.users.alice = import ../modules/home/home.nix;
-        }
-      ];
+          # Enable the official Mango NixOS module
+          #mango.nixosModules.mango
+
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+
+            # Inject 'theme' here for Home Manager modules
+            home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable theme;};
+
+            home-manager.users.alice = import ../modules/home/home.nix;
+          }
+        ];
+      };
+
+      # Example Host 2: Laptop (For future use)
+      # laptop = nixpkgs.lib.nixosSystem { ... };
+    };
+
+    # NEW: Dev Environments (Flake Templates)
+    templates = {
+      python = {
+        path = ../devshells/python;
+        description = "Python isolated development environment";
+      };
+      node = {
+        path = ../devshells/node;
+        description = "NodeJS isolated development environment";
+      };
+      rust = {
+        path = ../devshells/rust;
+        description = "Rust isolated development environment";
+      };
     };
   };
 }

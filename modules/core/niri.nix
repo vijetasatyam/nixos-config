@@ -11,7 +11,7 @@
     settings = {
       default_session = {
         # Drops you into a TUI login screen, logs into Niri upon success
-        command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd niri-session";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd niri-session";
         user = "alice";
       };
     };

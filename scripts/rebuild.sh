@@ -9,50 +9,30 @@ BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; CY
 BOLD='\033[1m'
 
 START_TIME=$SECONDS
-LOG_FILE="/tmp/nixos-build-error.log"
+FLAKE_DIR="/home/alice/nixos-config/flake"
 
 # Clean up the result symlink perfectly
 trap 'rm -f ./result' EXIT
 
-# --- Animation Function ---
-spin() {
-    local pid=$1
-    local msg=$2
-    local frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
-    local i=0
-    while kill -0 "$pid" 2>/dev/null; do
-        printf "\r${CYAN}${frames[i]} ${msg}...${NC}"
-        i=$(( (i + 1) % 10 ))
-        sleep 0.1
-    done
-    printf "\r\033[K" # Clear the line when done
-}
-
 # --- Pre-flight Check ---
-echo -e "${BLUE}${BOLD}🚀 Starting NixOS Flake Rebuild${NC}\n"
+echo -e "${BLUE}${BOLD}🚀 Starting NixOS Flake Rebuild via nh${NC}\n"
 
-# Authenticate sudo upfront so background animations don't hang asking for a password
+# Authenticate sudo upfront
 sudo -v
 # Keep sudo alive for the duration of the script
 while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
-cd ~/nixos-config/flake || exit
+cd "$FLAKE_DIR" || exit
 
 if [[ -n $(git status -s) ]]; then
     echo -e "${YELLOW}📝 Uncommitted changes detected.${NC}"
 fi
 
 # --- 1. Building (Flake) ---
-# Run the build in the background, pipe output to log, and start spinner
-sudo nixos-rebuild build --flake /home/alice/nixos-config/flake#nixos &> $LOG_FILE &
-build_pid=$!
-spin $build_pid "Building new generation"
-wait $build_pid
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Build Failed!${NC}"
-    echo -e "${YELLOW}Last 30 lines of error:${NC}"
-    tail -n 30 $LOG_FILE
+echo -e "${CYAN}⚙️ Building new generation for 'desktop'...${NC}"
+# nh os build automatically uses nom for a beautiful progress UI
+if ! nh os build "$FLAKE_DIR" --hostname desktop; then
+    echo -e "${RED}❌ Build Failed! Check the output above.${NC}"
     exit 1
 fi
 echo -e "${GREEN}✔ Build Successful${NC}"
@@ -80,33 +60,18 @@ read -p "❓ Apply this configuration? [Y/n] " confirm
 if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 4. Applying the Switch
-    sudo nixos-rebuild switch --flake /home/alice/nixos-config/flake#nixos &>> $LOG_FILE &
-    switch_pid=$!
-    spin $switch_pid "Activating configuration"
-    wait $switch_pid
+    echo -e "${CYAN}🚀 Activating configuration...${NC}"
+    nh os switch "$FLAKE_DIR" --hostname desktop
     echo -e "${GREEN}✔ System Activated${NC}"
-
-# # --- ☢️ THE NUCLEAR rEFInd SCRUB ☢️ ---
-#     # 1. Silently remove the unwanted NixOS defaults
-#     sudo sed -i '/^default_selection 2$/d' /boot/EFI/refind/refind.conf 2>/dev/null || true
-#     sudo sed -i '/^timeout 5$/d' /boot/EFI/refind/refind.conf 2>/dev/null || true
-
-#     # Safety Check: Only overwrite if the temp file isn't empty!
-#     if [ -s /tmp/refind.conf.tmp ]; then
-#         cat /tmp/refind.conf.tmp | sudo tee /boot/EFI/refind/refind.conf > /dev/null
-#     fi
-#     rm -f /tmp/refind.conf.tmp
-#     # ----------------------------------------
 
     # 5. Gate 2: Git Commit
     if [ -d ../.git ]; then
         gen=$(ls -l /nix/var/nix/profiles/system | grep -Eo 'system-[0-9]+-link' | tail -1 | grep -Eo '[0-9]+')
 
         cd ..
-        nix run nixpkgs#alejandra -- --quiet . &>> $LOG_FILE &
-        fmt_pid=$!
-        spin $fmt_pid "Formatting with Alejandra"
-        wait $fmt_pid
+
+        echo -e "${CYAN}🧹 Formatting with Alejandra...${NC}"
+        nix run nixpkgs#alejandra -- --quiet .
         echo -e "${GREEN}✔ Code Formatted${NC}"
 
         git add .
@@ -127,11 +92,10 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                     echo -e "${GREEN}✔ Committed: \"$commit_msg\"${NC}"
 
                     # 6. Gate 3: Push
+                    echo -e "${CYAN}📡 Checking remotes...${NC}"
                     git fetch --quiet github main &
                     git fetch --quiet codeberg main &
-                    fetch_pid=$!
-                    spin $fetch_pid "Checking remotes"
-                    wait $fetch_pid
+                    wait
 
                     AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
                     AHEAD_CODEBERG=$(git rev-list --count codeberg/main..HEAD 2>/dev/null || echo 0)
@@ -143,10 +107,8 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                         read -p "🌍 Push to Remotes? [y/N] " push_confirm
 
                         if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] ]]; then
-                            git push --quiet github main && git push --quiet codeberg main &
-                            push_pid=$!
-                            spin $push_pid "Syncing to Github & Codeberg"
-                            wait $push_pid
+                            echo -e "${CYAN}🔄 Syncing to Github & Codeberg...${NC}"
+                            git push --quiet github main && git push --quiet codeberg main
                             echo -e "${GREEN}✅ Remotes updated.${NC}"
                         else
                             echo -e "${YELLOW}⏭️ Push skipped.${NC}"

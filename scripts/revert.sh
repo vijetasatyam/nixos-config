@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # --- Color Definitions ---
-BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
+BLUE='\033[1;34m'; GREEN='\033[1;32m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; CYAN='\033[1;36m'; NC='\033[0m'
 
+FLAKE_DIR="/home/alice/nixos-config/flake"
 cd ~/nixos-config || exit
 
 echo -e "${BLUE}--- Recent Configuration History ---${NC}"
@@ -34,9 +35,8 @@ if [[ $confirm =~ ^[Yy]$ ]]; then
     echo -e "${CYAN}⏪ Resetting files to $hash...${NC}"
     git reset --hard "$hash"
 
-    # CRITICAL: Added the flake flag here!
     echo -e "${CYAN}⚙️ Rebuilding system to match configuration at $hash...${NC}"
-    sudo nixos-rebuild switch --flake ./flake#nixos
+    nh os switch "$FLAKE_DIR" --hostname desktop
 
     echo -e "${GREEN}✨ Revert Complete! Your system now matches commit $hash.${NC}"
 else

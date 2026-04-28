@@ -28,10 +28,6 @@
       ll = "eza -al --icons --group-directories-first";
       cat = "bat --style=plain";
 
-      # System Management
-      rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
-      update = "cd ~/nixos-config/flake && nix flake update && rebuild";
-
       # The Unstable Shell shortcut
       ush = "nix shell github:nixos/nixpkgs/nixos-unstable#$1 --impure";
 

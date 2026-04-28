@@ -1,5 +1,8 @@
 {
-  #pkgs, ... }: {
+  #pkgs,
+  theme,
+  ...
+}: {
   programs.waybar = {
     enable = true;
     settings = {
@@ -56,7 +59,6 @@
       };
     };
 
-    # The CSS Magic
     style = ''
       * {
         font-family: "JetBrainsMono Nerd Font", "sans-serif";
@@ -68,46 +70,40 @@
       }
 
       window#waybar {
-        /* Completely transparent background so only the pills show */
         background: transparent;
-        color: #f8f8f2;
+        color: ${theme.text};
         padding-top: 1px;
       }
 
-      /* The "Pill" styling base */
       #workspaces, #window, #clock, #pulseaudio, #network, #battery, #tray {
-        background-color: #282a36; /* Dracula bg */
-        color: #f8f8f2;
+        background-color: ${theme.bg};
+        color: ${theme.text};
         border-radius: 16px;
         padding: 4px 16px;
         margin-bottom: 0px;
       }
 
-      /* Specific Module Colors */
-      #workspaces {
-        background-color: #282a36;
-      }
-
+      #workspaces { background-color: ${theme.bg}; }
       #workspaces button {
-        color: #6272a4;
+        color: ${theme.surface};
         padding: 0 4px;
         transition: all 0.2s ease-in-out;
       }
 
       #workspaces button.active {
-        color: #ff79c6; /* Dracula Pink */
-        text-shadow: 0px 0px 5px rgba(255, 121, 198, 0.5);
+        color: ${theme.accent};
+        text-shadow: 0px 0px 5px ${theme.accent};
       }
 
       #workspaces button:hover {
         background: transparent;
-        color: #bd93f9;
+        color: ${theme.border};
       }
 
-      #clock { color: #8be9fd; }       /* Cyan */
-      #pulseaudio { color: #50fa7b; }  /* Green */
-      #network { color: #ffb86c; }     /* Orange */
-      #battery { color: #f1fa8c; }     /* Yellow */
+      #clock { color: ${theme.active}; }
+      #pulseaudio { color: ${theme.success}; }
+      #network { color: ${theme.warning}; }
+      #battery { color: ${theme.urgent}; }
     '';
   };
 }

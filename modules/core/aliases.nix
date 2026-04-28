@@ -8,7 +8,10 @@
     # --- System Management ---
     rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
     revert = "bash ~/nixos-config/scripts/revert.sh";
-    clean = "bash ~/nixos-config/scripts/clean.sh";
+    clean-sh = "bash ~/nixos-config/scripts/clean.sh";
+
+    clean = "nh clean all --keep 3"; # Keeps last 3 generations
+    update = "nh os boot --update"; # Updates flake lock and builds
 
     # Dry-run to check for errors before applying
     check = "sudo nixos-rebuild dry-activate";
@@ -43,6 +46,7 @@
     grep = "grep --color=auto";
     ".." = "cd ..";
     "..." = "cd ../..";
+    cat = "bat --style=plain";
   };
 
   # This ensures that even in subshells or different environments,
