@@ -24,7 +24,7 @@
                 right: true
             }
 
-            # The floating "Air" effect
+            // The floating "Air" effect
             margins {
                 top: 8
                 left: 16
@@ -34,7 +34,7 @@
             height: 40
             color: "transparent"
 
-            # The actual visual bar
+            // The actual visual bar
             Rectangle {
                 anchors.fill: parent
                 color: "${theme.bg}"
@@ -42,7 +42,7 @@
                 border.color: "${theme.surface}"
                 border.width: 2
 
-                # Left side: Workspaces (Placeholder logic)
+                // Left side: Workspaces (Placeholder logic)
                 Row {
                     anchors {
                         left: parent.left
@@ -57,7 +57,7 @@
                             width: 12
                             height: 12
                             radius: 6
-                            # Highlight the first one as "active"
+                            // Highlight the first one as "active"
                             color: index === 0 ? "${theme.accent}" : "${theme.surface}"
 
                             Behavior on color { ColorAnimation { duration: 200 } }
@@ -65,7 +65,7 @@
                     }
                 }
 
-                # Center: Clock
+                // Center: Clock
                 Text {
                     anchors.centerIn: parent
                     font.family: "JetBrainsMono Nerd Font"
@@ -73,7 +73,7 @@
                     font.bold: true
                     color: "${theme.active}"
 
-                    # A simple timer to update the clock
+                    // A simple timer to update the clock
                     text: Qt.formatDateTime(new Date(), "hh:mm ap")
                     Timer {
                         interval: 1000
@@ -83,7 +83,7 @@
                     }
                 }
 
-                # Right side: System Tray / Status
+                // Right side: System Tray / Status
                 Row {
                     anchors {
                         right: parent.right
