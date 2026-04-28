@@ -12,8 +12,8 @@
 
   # Write the QML file that Quickshell reads on startup
   xdg.configFile."quickshell/shell.qml".text = ''
-    import QtQuick 2.15
-    import Quickshell 1.0
+    import QtQuick
+    import Quickshell
 
     ShellRoot {
         PanelWindow {

@@ -31,7 +31,7 @@
 
   # Required for `nh` to work without specifying path every time
   home.sessionVariables = {
-    FLAKE = "/home/alice/nixos-config";
+    NH_FLAKE = "/home/alice/nixos-config";
   };
 
   home.stateVersion = "25.11";
