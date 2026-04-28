@@ -12,6 +12,7 @@
     ../../modules/core/extra-config.nix
     ../../modules/core/flathub.nix
     ../../modules/core/networking.nix
+    ../../modules/core/niri.nix
     ../../modules/core/services.nix
     ../../modules/core/system.nix
     ../../modules/core/users.nix

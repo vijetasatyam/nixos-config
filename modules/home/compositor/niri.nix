@@ -1,21 +1,18 @@
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   home.packages = with pkgs; [
     # Wayland Utilities
-    fuzzel        # App launcher
-    mako          # Notification daemon
-    swaybg        # Wallpaper utility
-    grim          # Screenshots
-    slurp         # Screen region selection
+    fuzzel # App launcher
+    mako # Notification daemon
+    swaybg # Wallpaper utility
+    grim # Screenshots
+    slurp # Screen region selection
 
     # Clipboard
-    wl-clipboard  # Core clipboard tools
-    cliphist      # Clipboard history manager
+    wl-clipboard # Core clipboard tools
+    cliphist # Clipboard history manager
 
     # Tweaker & Appearance
-    nwg-look      # GTK theme tweaker for Wayland
+    nwg-look # GTK theme tweaker for Wayland
 
     # Performance Monitoring
     mission-center # Beautiful, Windows-like performance monitor

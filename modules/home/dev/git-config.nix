@@ -2,13 +2,13 @@
   home.packages = with pkgs; [
     git
     gnupg
-    pinentry-gnome3
+    pinentry-qt
   ];
 
   services.gpg-agent = {
     enable = true;
     enableSshSupport = true;
-    pinentry.package = pkgs.pinentry-gnome3;
+    pinentry.package = pkgs.pinentry-qt;
   };
 
   programs.git = {
