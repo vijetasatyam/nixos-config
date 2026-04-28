@@ -14,6 +14,7 @@
     ./dev/terminal.nix
     ./compositor/niri.nix
     ./compositor/waybar.nix
+    ./compositor/moko.nix
   ];
 
   # General User Packages
