@@ -58,16 +58,16 @@
   in {
     # NEW: Multi-Host Setup replacing the single nixosConfigurations.nixos
     nixosConfigurations = {
-      # Host 1: Desktop
-      desktop = nixpkgs.lib.nixosSystem {
+      # Host 1: Sage
+      sage = nixpkgs.lib.nixosSystem {
         inherit system;
 
         # Inject 'theme' here for system-level modules
         specialArgs = {inherit inputs pkgs-unstable theme;};
 
         modules = [
-          # Make sure to rename your 'hosts/nixos' folder to 'hosts/desktop'
-          ../hosts/desktop/configuration.nix
+          # Make sure to rename your 'hosts/nixos' folder to 'hosts/sage'
+          ../hosts/sage/configuration.nix
 
           # 3. Apply it to the Stable instance via a module
           {nixpkgs.config = shared-config;} # Centralized here

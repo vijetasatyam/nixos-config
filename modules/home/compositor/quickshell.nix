@@ -31,7 +31,7 @@
                 right: 16
             }
 
-            height: 40
+            implicitHeight: 40
             color: "transparent"
 
             // The actual visual bar
@@ -103,12 +103,6 @@
                         font.pixelSize: 16
                         color: "${theme.warning}"
                         text: "󰖩"
-                    }
-                    Text {
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 16
-                        color: "${theme.urgent}"
-                        text: "  90%"
                     }
                 }
             }

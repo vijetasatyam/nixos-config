@@ -16,6 +16,7 @@
     # ./compositor/waybar.nix
     ./compositor/swaync.nix
     ./compositor/quickshell.nix
+    ./robbsbro.nix
   ];
 
   # General User Packages

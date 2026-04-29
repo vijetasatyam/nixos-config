@@ -6,7 +6,7 @@
 }: {
   # Networking and Firewall.
 
-  networking.hostName = "desktop"; # Define your hostname.
+  networking.hostName = "sage"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary

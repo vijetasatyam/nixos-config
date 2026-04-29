@@ -36,7 +36,7 @@ if [[ $confirm =~ ^[Yy]$ ]]; then
     git reset --hard "$hash"
 
     echo -e "${CYAN}⚙️ Rebuilding system to match configuration at $hash...${NC}"
-    nh os switch "$FLAKE_DIR" --hostname desktop
+    nh os switch "$FLAKE_DIR" --hostname sage
 
     echo -e "${GREEN}✨ Revert Complete! Your system now matches commit $hash.${NC}"
 else

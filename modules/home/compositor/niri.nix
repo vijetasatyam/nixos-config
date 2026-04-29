@@ -1,8 +1,4 @@
-{
-  pkgs,
-  theme,
-  ...
-}: {
+{ pkgs, theme, ... }: {
   home.packages = with pkgs; [
     fuzzel
     swaybg
@@ -35,8 +31,8 @@
 
         focus-ring {
             width 4
-            active-color "${theme.accent}"   // Dynamic Theme Accent
-            inactive-color "${theme.surface}" // Dynamic Theme Inactive
+            active-color "${theme.accent}"
+            inactive-color "${theme.surface}"
         }
     }
 
@@ -55,22 +51,37 @@
     window-rule { geometry-corner-radius 12; clip-to-geometry true; }
     window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
 
-    // 5. Autostart SwayNC instead of Mako
-    spawn-at-startup "quickshell"
+    // --- Autostart ---
+    // Start Pywal to generate live colors, then launch Quickshell
+    spawn-at-startup "sh" "-c" "wal -R && quickshell"
     spawn-at-startup "swaync"
     spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.jpg" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 
+    // --- Keybindings ---
     binds {
         Mod+Return { spawn "ghostty"; }
         Mod+D { spawn "fuzzel"; }
         Mod+Q { close-window; }
-        //  ... (Keep your other binds identical) ...
+
+        // Window Navigation
+        Mod+Left  { focus-column-left; }
+        Mod+Right { focus-column-right; }
+        Mod+Up    { focus-window-up; }
+        Mod+Down  { focus-window-down; }
+
+        // Moving Windows
+        Mod+Shift+Left  { move-column-left; }
+        Mod+Shift+Right { move-column-right; }
+        Mod+Shift+Up    { move-window-up; }
+        Mod+Shift+Down  { move-window-down; }
+
+        Mod+Shift+Q { quit; }
         Print { spawn "sh" "-c" "grim -g \"$(slurp)\" - | wl-copy"; }
     }
   '';
 
-  # Theme Fuzzel dynamically
+  # Theme Fuzzel dynamically using the Flake Theme Variables
   xdg.configFile."fuzzel/fuzzel.ini".text = ''
     [main]
     font=JetBrainsMono Nerd Font:size=12

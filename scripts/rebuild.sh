@@ -29,9 +29,9 @@ if [[ -n $(git status -s) ]]; then
 fi
 
 # --- 1. Building (Flake) ---
-echo -e "${CYAN}⚙️ Building new generation for 'desktop'...${NC}"
+echo -e "${CYAN}⚙️ Building new generation for 'sage'...${NC}"
 # nh os build automatically uses nom for a beautiful progress UI
-if ! nh os build "$FLAKE_DIR" --hostname desktop; then
+if ! nh os build "$FLAKE_DIR" --hostname sage; then
     echo -e "${RED}❌ Build Failed! Check the output above.${NC}"
     exit 1
 fi
@@ -61,7 +61,7 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
 
     # 4. Applying the Switch
     echo -e "${CYAN}🚀 Activating configuration...${NC}"
-    nh os switch "$FLAKE_DIR" --hostname desktop
+    nh os switch "$FLAKE_DIR" --hostname sage
     echo -e "${GREEN}✔ System Activated${NC}"
 
     # 5. Gate 2: Git Commit
