@@ -1,12 +1,15 @@
-{ pkgs, inputs, ... }: {
-
+{
+  pkgs,
+  inputs,
+  ...
+}: {
   # 1. Install Robbsbro69's specific dependencies
   home.packages = with pkgs; [
     inputs.quickshell.packages.${pkgs.system}.default
-    pywal      # Generates live color palettes
-    cava       # Audio visualizer used in their Quickshell music panel
-    kitty      # Their terminal of choice
-    swww       # Or keep swaybg if you prefer
+    pywal # Generates live color palettes
+    cava # Audio visualizer used in their Quickshell music panel
+    kitty # Their terminal of choice
+    swww # Or keep swaybg if you prefer
     pamixer
     playerctl
     brightnessctl

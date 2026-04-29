@@ -1,4 +1,8 @@
-{ pkgs, theme, ... }: {
+{
+  pkgs,
+  theme,
+  ...
+}: {
   home.packages = with pkgs; [
     fuzzel
     swaybg
