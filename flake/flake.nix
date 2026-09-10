@@ -86,6 +86,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "hm-bak";
 
             # Inject 'theme' here for Home Manager modules
             home-manager.extraSpecialArgs = {
