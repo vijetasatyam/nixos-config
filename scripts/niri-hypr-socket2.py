@@ -2,7 +2,6 @@
 import json
 import os
 import select
-import shutil
 import socket
 import subprocess
 import sys
@@ -10,7 +9,8 @@ import threading
 
 SIGNATURE = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "niri-fake-hypr")
 SOCKET_DIR = f"/tmp/hypr/{SIGNATURE}"
-SOCKET_PATH = f"{SOCKET_DIR}/.socket2.sock"
+EVENT_SOCK = f"{SOCKET_DIR}/.socket2.sock"
+CMD_SOCK = f"{SOCKET_DIR}/.socket.sock"
 
 clients = set()
 clients_lock = threading.Lock()
@@ -28,16 +28,15 @@ def broadcast(msg: str):
         clients.difference_update(to_remove)
 
 
-def server_worker():
-    if os.path.exists(SOCKET_PATH):
+def event_server_worker():
+    if os.path.exists(EVENT_SOCK):
         try:
-            os.unlink(SOCKET_PATH)
+            os.unlink(EVENT_SOCK)
         except OSError:
             pass
 
-    os.makedirs(SOCKET_DIR, exist_ok=True)
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(SOCKET_PATH)
+    server.bind(EVENT_SOCK)
     server.listen(16)
 
     while True:
@@ -45,6 +44,89 @@ def server_worker():
             conn, _ = server.accept()
             with clients_lock:
                 clients.add(conn)
+        except Exception:
+            break
+
+
+def cmd_server_worker():
+    """Responds to Caelestia's queries for initial state (monitors, workspaces, etc.)"""
+    if os.path.exists(CMD_SOCK):
+        try:
+            os.unlink(CMD_SOCK)
+        except OSError:
+            pass
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(CMD_SOCK)
+    server.listen(16)
+
+    while True:
+        try:
+            conn, _ = server.accept()
+            data = conn.recv(1024).decode("utf-8", errors="ignore").strip()
+
+            # Handle requests Caelestia sends on startup
+            if "monitors" in data:
+                # Return dummy monitor matching default output
+                resp = json.dumps(
+                    [
+                        {
+                            "id": 0,
+                            "name": "eDP-1",
+                            "description": "Built-in Display",
+                            "make": "Unknown",
+                            "model": "Unknown",
+                            "serial": "",
+                            "width": 1920,
+                            "height": 1080,
+                            "refreshRate": 60.0,
+                            "x": 0,
+                            "y": 0,
+                            "activeWorkspace": {"id": 1, "name": "1"},
+                            "specialWorkspace": {"id": 0, "name": ""},
+                            "focused": True,
+                        }
+                    ]
+                )
+            elif "workspaces" in data:
+                resp = json.dumps(
+                    [
+                        {"id": i, "name": str(i), "monitor": "eDP-1", "windows": 1}
+                        for i in range(1, 6)
+                    ]
+                )
+            elif "activewindow" in data:
+                resp = json.dumps(
+                    {
+                        "address": "0x0",
+                        "mapped": True,
+                        "hidden": False,
+                        "at": [0, 0],
+                        "size": [1920, 1080],
+                        "workspace": {"id": 1, "name": "1"},
+                        "floating": False,
+                        "monitor": 0,
+                        "class": "",
+                        "title": "",
+                        "initialClass": "",
+                        "initialTitle": "",
+                        "pid": 0,
+                        "xwayland": False,
+                        "pinned": False,
+                        "fullscreen": 0,
+                        "fullscreenClient": 0,
+                    }
+                )
+            elif "dispatch workspace" in data:
+                # Caelestia clicked a workspace button
+                target = data.split()[-1]
+                subprocess.Popen(["niri", "msg", "action", "focus-workspace", target])
+                resp = "ok"
+            else:
+                resp = "ok"
+
+            conn.sendall(resp.encode("utf-8"))
+            conn.close()
         except Exception:
             break
 
@@ -63,12 +145,10 @@ def niri_event_worker():
         except json.JSONDecodeError:
             continue
 
-        # 1. Workspace Activated
         if "WorkspaceActivated" in ev:
             ws_id = ev["WorkspaceActivated"].get("id", 1)
             broadcast(f"workspace>>{ws_id}")
 
-        # 2. Window Focus Changed
         elif "WindowFocusChanged" in ev:
             focus_info = ev["WindowFocusChanged"]
             if focus_info:
@@ -80,7 +160,6 @@ def niri_event_worker():
                 broadcast("activewindow>>,")
                 broadcast("activewindowv2>>")
 
-        # 3. Workspaces Changed (Created/Removed)
         elif "WorkspacesChanged" in ev:
             for ws in ev["WorkspacesChanged"].get("workspaces", []):
                 ws_id = ws.get("id")
@@ -90,7 +169,9 @@ def niri_event_worker():
 
 
 def main():
-    threading.Thread(target=server_worker, daemon=True).start()
+    os.makedirs(SOCKET_DIR, exist_ok=True)
+    threading.Thread(target=event_server_worker, daemon=True).start()
+    threading.Thread(target=cmd_server_worker, daemon=True).start()
     niri_event_worker()
 
 
