@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import socket
 import socketserver
 import subprocess
@@ -40,6 +41,19 @@ def broadcast(msg: str):
         clients.difference_update(to_remove)
 
 
+def get_current_workspace_info():
+    ws_list = get_niri_json(["workspaces"]) or []
+    active_idx = 1
+    max_idx = len(ws_list) if ws_list else 1
+    for ws in ws_list:
+        idx_val = ws.get("idx", ws.get("id", 1))
+        if ws.get("is_active"):
+            active_idx = idx_val
+        if idx_val > max_idx:
+            max_idx = idx_val
+    return active_idx, max_idx, ws_list
+
+
 # --- Event Broadcaster (.socket2.sock) ---
 def event_server_worker():
     if os.path.exists(EVENT_SOCK):
@@ -73,6 +87,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 outputs = get_niri_json(["outputs"]) or {}
                 focused_win = get_niri_json(["focused-window"]) or {}
                 is_fullscreen = bool(focused_win.get("is_fullscreen", False))
+                active_idx, _, _ = get_current_workspace_info()
 
                 monitors_payload = []
                 idx = 0
@@ -93,8 +108,8 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             "x": out.get("logical", {}).get("x", 0),
                             "y": out.get("logical", {}).get("y", 0),
                             "activeWorkspace": {
-                                "id": 1,
-                                "name": "1",
+                                "id": active_idx,
+                                "name": str(active_idx),
                                 "hasfullscreen": is_fullscreen,
                             },
                             "specialWorkspace": {"id": 0, "name": ""},
@@ -117,8 +132,8 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             "x": 0,
                             "y": 0,
                             "activeWorkspace": {
-                                "id": 1,
-                                "name": "1",
+                                "id": active_idx,
+                                "name": str(active_idx),
                                 "hasfullscreen": is_fullscreen,
                             },
                             "specialWorkspace": {"id": 0, "name": ""},
@@ -128,22 +143,21 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 resp = json.dumps(monitors_payload)
 
             elif "workspaces" in raw:
-                niri_ws = get_niri_json(["workspaces"]) or []
+                active_idx, _, ws_list = get_current_workspace_info()
                 focused_win = get_niri_json(["focused-window"]) or {}
                 is_fullscreen = bool(focused_win.get("is_fullscreen", False))
 
                 ws_payload = []
-                for ws in niri_ws:
+                for ws in ws_list:
                     ws_id = ws.get("id", 1)
                     idx_val = ws.get("idx", ws_id)
                     ws_payload.append(
                         {
-                            "id": ws_id,
+                            "id": idx_val,
                             "name": str(idx_val),
                             "monitor": ws.get("output", "eDP-1"),
                             "windows": 0,
-                            "hasfullscreen": ws.get("is_active", False)
-                            and is_fullscreen,
+                            "hasfullscreen": (idx_val == active_idx) and is_fullscreen,
                         }
                     )
                 if not ws_payload:
@@ -158,6 +172,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
             elif "activewindow" in raw:
                 win = get_niri_json(["focused-window"]) or {}
                 fs = 2 if win.get("is_fullscreen", False) else 0
+                active_idx, _, _ = get_current_workspace_info()
                 resp = json.dumps(
                     {
                         "address": hex(win.get("id", 0)),
@@ -165,7 +180,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                         "hidden": False,
                         "at": [0, 0],
                         "size": [0, 0],
-                        "workspace": {"id": 1, "name": "1"},
+                        "workspace": {"id": active_idx, "name": str(active_idx)},
                         "floating": False,
                         "monitor": 0,
                         "class": win.get("app_id", ""),
@@ -181,38 +196,49 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 )
 
             elif "dispatch workspace" in raw:
-                target = raw.split()[-1]
-                # Match relative negative before positive or numerical values
-                if any(x in target for x in ["-", "prev"]):
-                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-up"])
-                elif any(x in target for x in ["+", "next"]):
-                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-down"])
-                else:
-                    digits = "".join(filter(str.isdigit, target))
-                    if digits:
-                        target_idx = int(digits)
-                        res = subprocess.run(
-                            [
-                                "niri",
-                                "msg",
-                                "action",
-                                "focus-workspace",
-                                str(target_idx),
-                            ],
-                            capture_output=True,
+                target = raw.split()[-1].strip()
+                active_idx, max_idx, _ = get_current_workspace_info()
+
+                # Up-scroll / Prior workspace
+                if any(x in target for x in ["-1", "e-", "m-", "r-", "prev"]):
+                    if active_idx > 1:
+                        subprocess.run(["niri", "msg", "action", "focus-workspace-up"])
+                    else:
+                        subprocess.run(
+                            ["niri", "msg", "action", "focus-workspace", "1"]
                         )
-                        if res.returncode != 0:
-                            ws_list = get_niri_json(["workspaces"]) or []
-                            diff = target_idx - len(ws_list)
-                            for _ in range(max(1, diff)):
+
+                # Down-scroll / Next workspace (allows dynamic stepping)
+                elif any(x in target for x in ["+1", "e+", "m+", "r+", "next"]):
+                    subprocess.run(["niri", "msg", "action", "focus-workspace-down"])
+
+                # Direct numeric workspace
+                else:
+                    digits = re.findall(r"\d+", target)
+                    if digits:
+                        target_num = int(digits[0])
+                        # If requesting a higher workspace that doesn't exist yet, step down to create it
+                        if target_num > max_idx:
+                            steps = target_num - max_idx
+                            for _ in range(steps):
                                 subprocess.run(
-                                    [
-                                        "niri",
-                                        "msg",
-                                        "action",
-                                        "focus-workspace-down",
-                                    ]
+                                    ["niri", "msg", "action", "focus-workspace-down"]
                                 )
+                        else:
+                            subprocess.run(
+                                [
+                                    "niri",
+                                    "msg",
+                                    "action",
+                                    "focus-workspace",
+                                    str(target_num),
+                                ]
+                            )
+
+                # Broadcast immediate sync
+                new_idx, _, _ = get_current_workspace_info()
+                broadcast(f"workspace>>{new_idx}")
+                broadcast(f"focusedmon>>eDP-1,{new_idx}")
                 resp = "ok"
 
             else:
@@ -257,7 +283,9 @@ def niri_event_worker():
 
         if "WorkspaceActivated" in ev:
             ws_id = ev["WorkspaceActivated"].get("id", 1)
-            broadcast(f"workspace>>{ws_id}")
+            idx_val = ev["WorkspaceActivated"].get("idx", ws_id)
+            broadcast(f"workspace>>{idx_val}")
+            broadcast(f"focusedmon>>eDP-1,{idx_val}")
 
         elif "WindowFocusChanged" in ev:
             focus_info = ev["WindowFocusChanged"]
@@ -276,9 +304,11 @@ def niri_event_worker():
         elif "WorkspacesChanged" in ev:
             for ws in ev["WorkspacesChanged"].get("workspaces", []):
                 ws_id = ws.get("id")
+                idx_val = ws.get("idx", ws_id)
                 if ws.get("is_active"):
-                    broadcast(f"workspace>>{ws_id}")
-                broadcast(f"createworkspace>>{ws_id}")
+                    broadcast(f"workspace>>{idx_val}")
+                    broadcast(f"focusedmon>>eDP-1,{idx_val}")
+                broadcast(f"createworkspace>>{idx_val}")
 
 
 def main():
