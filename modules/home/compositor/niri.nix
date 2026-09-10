@@ -63,19 +63,11 @@
         }
     }
 
-    // Rules for Caelestia surfaces and dialogs
+    // Window rules for Caelestia surfaces and dialogs
     window-rule { geometry-corner-radius 16; clip-to-geometry true; }
     window-rule { match app-id=r#"^caelestia.*"#; open-floating true; }
     window-rule { match app-id=r#"^quickshell.*"#; open-floating true; }
     window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
-
-    // Layer rules for Caelestia
-    layer-rule {
-        match namespace=r#"^caelestia.*"#
-    }
-    layer-rule {
-        match namespace=r#"^quickshell.*"#
-    }
 
     // --- Autostart ---
     spawn-at-startup "python3" "/home/alice/nixos-config/scripts/niri-hypr-socket2.py"
@@ -109,25 +101,31 @@
         Mod+Shift+Down  { move-window-down; }
 
         // Workspaces (1 - 9)
-                Mod+1 { focus-workspace 1; }
-                Mod+2 { focus-workspace 2; }
-                Mod+3 { focus-workspace 3; }
-                Mod+4 { focus-workspace 4; }
-                Mod+5 { focus-workspace 5; }
-                Mod+6 { focus-workspace 6; }
-                Mod+7 { focus-workspace 7; }
-                Mod+8 { focus-workspace 8; }
-                Mod+9 { focus-workspace 9; }
+        Mod+1 { focus-workspace 1; }
+        Mod+2 { focus-workspace 2; }
+        Mod+3 { focus-workspace 3; }
+        Mod+4 { focus-workspace 4; }
+        Mod+5 { focus-workspace 5; }
+        Mod+6 { focus-workspace 6; }
+        Mod+7 { focus-workspace 7; }
+        Mod+8 { focus-workspace 8; }
+        Mod+9 { focus-workspace 9; }
 
-                Mod+Shift+1 { move-column-to-workspace 1; }
-                Mod+Shift+2 { move-column-to-workspace 2; }
-                Mod+Shift+3 { move-column-to-workspace 3; }
-                Mod+Shift+4 { move-column-to-workspace 4; }
-                Mod+Shift+5 { move-column-to-workspace 5; }
-                Mod+Shift+6 { move-column-to-workspace 6; }
-                Mod+Shift+7 { move-column-to-workspace 7; }
-                Mod+Shift+8 { move-column-to-workspace 8; }
-                Mod+Shift+9 { move-column-to-workspace 9; }
+        Mod+Shift+1 { move-column-to-workspace 1; }
+        Mod+Shift+2 { move-column-to-workspace 2; }
+        Mod+Shift+3 { move-column-to-workspace 3; }
+        Mod+Shift+4 { move-column-to-workspace 4; }
+        Mod+Shift+5 { move-column-to-workspace 5; }
+        Mod+Shift+6 { move-column-to-workspace 6; }
+        Mod+Shift+7 { move-column-to-workspace 7; }
+        Mod+Shift+8 { move-column-to-workspace 8; }
+        Mod+Shift+9 { move-column-to-workspace 9; }
+
+        // Vertical Workspace Step & Dynamic Creation
+        Mod+Page_Down { focus-workspace-down; }
+        Mod+Page_Up   { focus-workspace-up; }
+        Mod+Shift+Page_Down { move-column-to-workspace-down; }
+        Mod+Shift+Page_Up   { move-column-to-workspace-up; }
 
         // Volume & Media Controls
         XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
