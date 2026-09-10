@@ -8,39 +8,34 @@ import subprocess
 import threading
 
 SIGNATURE = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "niri-fake-hypr")
-XDG_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+XDG_RUNTIME = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
 
-# Setup multiple target directories for maximum compatibility with Quickshell
-TARGET_DIRS = [
-    f"/tmp/hypr/{SIGNATURE}",
-    f"{XDG_RUNTIME_DIR}/hypr/{SIGNATURE}",
-    f"/tmp/hypr",
-    f"{XDG_RUNTIME_DIR}/hypr",
-]
+RUNTIME_DIR = f"{XDG_RUNTIME}/hypr/{SIGNATURE}"
+FALLBACK_DIR = f"/tmp/hypr/{SIGNATURE}"
 
-EVENT_SOCK = f"/tmp/hypr/{SIGNATURE}/.socket2.sock"
-CMD_SOCK = f"/tmp/hypr/{SIGNATURE}/.socket.sock"
+EVENT_SOCK = f"{RUNTIME_DIR}/.socket2.sock"
+CMD_SOCK = f"{RUNTIME_DIR}/.socket.sock"
 
 clients = set()
 clients_lock = threading.Lock()
 
 
-def sync_socket_links():
-    """Ensure sockets are mirrored across all locations Quickshell might check."""
-    for d in TARGET_DIRS:
-        os.makedirs(d, exist_ok=True)
+def setup_directories_and_links():
+    os.makedirs(RUNTIME_DIR, exist_ok=True)
+    os.makedirs(FALLBACK_DIR, exist_ok=True)
 
     for sock in [".socket.sock", ".socket2.sock"]:
-        src = f"/tmp/hypr/{SIGNATURE}/{sock}"
-        for d in TARGET_DIRS:
-            dst = f"{d}/{sock}"
-            if dst != src:
-                try:
-                    if os.path.exists(dst) or os.path.islink(dst):
-                        os.unlink(dst)
-                    os.symlink(src, dst)
-                except OSError:
-                    pass
+        src = f"{RUNTIME_DIR}/{sock}"
+        dst = f"{FALLBACK_DIR}/{sock}"
+        if os.path.islink(dst) or os.path.exists(dst):
+            try:
+                os.unlink(dst)
+            except OSError:
+                pass
+        try:
+            os.symlink(src, dst)
+        except OSError:
+            pass
 
 
 def get_niri_json(subcommand: list):
@@ -97,8 +92,7 @@ def event_server_worker():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(EVENT_SOCK)
     server.listen(16)
-
-    sync_socket_links()
+    setup_directories_and_links()
 
     while True:
         try:
@@ -178,7 +172,8 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 resp = json.dumps(monitors_payload)
 
             elif "workspaces" in raw:
-                all_ids = sorted(list(set(ws_indices + [active_idx])))
+                # Include active_idx and next adjacent workspace so Caelestia knows it can step
+                all_ids = sorted(list(set(ws_indices + [active_idx, active_idx + 1])))
                 ws_payload = [
                     {
                         "id": int(i),
@@ -221,28 +216,43 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
             elif "dispatch workspace" in raw:
                 target = raw.split()[-1].strip()
 
-                # Up-scroll (Caelestia dispatches "workspace r-1")
-                if any(x in target for x in ["r-1", "e-1", "m-1", "-", "prev"]):
-                    subprocess.run(["niri", "msg", "action", "focus-workspace-up"])
+                # Up-scroll / previous workspace
+                if (
+                    any(x in target for x in ["r-1", "e-1", "m-1", "prev"])
+                    or target == "-1"
+                ):
+                    if active_idx > 1:
+                        subprocess.run(["niri", "msg", "action", "focus-workspace-up"])
+                    else:
+                        subprocess.run(
+                            ["niri", "msg", "action", "focus-workspace", "1"]
+                        )
 
-                # Down-scroll (Caelestia dispatches "workspace r+1")
-                elif any(x in target for x in ["r+1", "e+1", "m+1", "+", "next"]):
-                    subprocess.run(["niri", "msg", "action", "focus-workspace-down"])
+                # Down-scroll / next workspace (dynamically create/step forward)
+                elif (
+                    any(x in target for x in ["r+1", "e+1", "m+1", "next"])
+                    or target == "+1"
+                ):
+                    # Explicitly focus next index so Niri allocates the new workspace
+                    next_ws = active_idx + 1
+                    res = subprocess.run(
+                        ["niri", "msg", "action", "focus-workspace", str(next_ws)],
+                        capture_output=True,
+                    )
+                    if res.returncode != 0:
+                        # Fallback to action down
+                        subprocess.run(
+                            ["niri", "msg", "action", "focus-workspace-down"]
+                        )
 
-                # Numerical jump
+                # Direct numeric workspace
                 else:
                     digits = re.findall(r"\d+", target)
                     if digits:
                         num = int(digits[0])
-                        if num > max_idx:
-                            for _ in range(num - max_idx):
-                                subprocess.run(
-                                    ["niri", "msg", "action", "focus-workspace-down"]
-                                )
-                        else:
-                            subprocess.run(
-                                ["niri", "msg", "action", "focus-workspace", str(num)]
-                            )
+                        subprocess.run(
+                            ["niri", "msg", "action", "focus-workspace", str(num)]
+                        )
 
                 new_idx, _, _ = get_workspace_state()
                 broadcast(f"workspace>>{new_idx}")
@@ -264,7 +274,7 @@ class ThreadedUnixStreamServer(
 
 
 def cmd_server_worker():
-    os.makedirs(f"/tmp/hypr/{SIGNATURE}", exist_ok=True)
+    os.makedirs(RUNTIME_DIR, exist_ok=True)
     if os.path.exists(CMD_SOCK):
         try:
             os.unlink(CMD_SOCK)
@@ -272,7 +282,7 @@ def cmd_server_worker():
             pass
 
     server = ThreadedUnixStreamServer(CMD_SOCK, HyprCmdHandler)
-    sync_socket_links()
+    setup_directories_and_links()
     server.serve_forever()
 
 
@@ -321,7 +331,7 @@ def niri_event_worker():
 
 
 def main():
-    sync_socket_links()
+    setup_directories_and_links()
     threading.Thread(target=event_server_worker, daemon=True).start()
     threading.Thread(target=cmd_server_worker, daemon=True).start()
     niri_event_worker()
