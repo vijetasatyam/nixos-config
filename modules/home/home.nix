@@ -13,10 +13,11 @@
     ./dev/git-config.nix
     ./dev/terminal.nix
     ./compositor/niri.nix
+    ./compositor/caelestia.nix
     # ./compositor/waybar.nix
-    ./compositor/swaync.nix
-    ./compositor/quickshell.nix
-    ./robbsbro.nix
+    # ./compositor/swaync.nix
+    # ./compositor/quickshell.nix
+    # ./robbsbro.nix
   ];
 
   # General User Packages

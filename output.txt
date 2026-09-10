@@ -1,0 +1,2147 @@
+==> ./flake/flake.nix <==
+{
+  description = "Alice's Modular Hybrid Config";
+
+  inputs = {
+    # 1. Stable Base
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+
+    # 2. Unstable Source
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    # 3. Home Manager
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # 4. Quickshell
+    quickshell = {
+      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    # 5. Caelestia Shell
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    nixpkgs-unstable,
+    home-manager,
+    quickshell,
+    caelestia-shell,
+    ...
+  } @ inputs: let
+    system = "x86_64-linux";
+
+    # 1. Define a shared config block
+    shared-config = {
+      allowUnfree = true;
+    };
+
+    # 2. Apply it to the Unstable instance
+    pkgs-unstable = import nixpkgs-unstable {
+      inherit system;
+      config = shared-config; # Centralized here
+    };
+
+    # NEW: Abstract Themes into Variables (Catppuccin Mocha)
+    theme = {
+      name = "catppuccin-mocha";
+      bg = "#1e1e2e"; # Base
+      text = "#cdd6f4"; # Text
+      accent = "#cba6f7"; # Mauve (Primary Accent)
+      border = "#b4befe"; # Lavender
+      surface = "#313244"; # Surface 1
+      active = "#89b4fa"; # Blue
+      urgent = "#f38ba8"; # Red
+      success = "#a6e3a1"; # Green
+      warning = "#f9e2af"; # Yellow
+    };
+  in {
+    # NEW: Multi-Host Setup replacing the single nixosConfigurations.nixos
+    nixosConfigurations = {
+      # Host 1: Sage
+      sage = nixpkgs.lib.nixosSystem {
+        inherit system;
+
+        # Inject 'theme' here for system-level modules
+        specialArgs = {inherit inputs pkgs-unstable theme;};
+
+        modules = [
+          # Make sure to rename your 'hosts/nixos' folder to 'hosts/sage'
+          ../hosts/sage/configuration.nix
+
+          # 3. Apply it to the Stable instance via a module
+          {nixpkgs.config = shared-config;} # Centralized here
+
+          # Enable the official Mango NixOS module
+          #mango.nixosModules.mango
+
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+
+            # Inject 'theme' here for Home Manager modules
+            home-manager.extraSpecialArgs = {
+              inherit inputs pkgs-unstable theme;
+              caelestia-shell = inputs.caelestia-shell;
+            };
+
+            home-manager.users.alice = import ../modules/home/home.nix;
+          }
+        ];
+      };
+
+      # Example Host 2: Laptop (For future use)
+      # laptop = nixpkgs.lib.nixosSystem { ... };
+    };
+
+    # NEW: Dev Environments (Flake Templates)
+    templates = {
+      python = {
+        path = ../devshells/python;
+        description = "Python isolated development environment";
+      };
+      node = {
+        path = ../devshells/node;
+        description = "NodeJS isolated development environment";
+      };
+      rust = {
+        path = ../devshells/rust;
+        description = "Rust isolated development environment";
+      };
+    };
+  };
+}
+
+==> ./modules/home/home.nix <==
+{
+  #config,
+  pkgs,
+  #pkgs-unstable,
+  ...
+}: {
+  home.username = "alice";
+  home.homeDirectory = "/home/alice";
+
+  # Import User Configs`
+  imports = [
+    ./dev/development-tools.nix
+    ./dev/git-config.nix
+    ./dev/terminal.nix
+    ./compositor/niri.nix
+    ./compositor/caelestia.nix
+    # ./compositor/waybar.nix
+    # ./compositor/swaync.nix
+    # ./compositor/quickshell.nix
+    # ./robbsbro.nix
+  ];
+
+  # General User Packages
+  home.packages = with pkgs; [
+    fastfetch
+    btop
+    ripgrep
+    jq
+    eza # Better ls
+    bat # Better cat
+    nh
+  ];
+
+  # Required for `nh` to work without specifying path every time
+  home.sessionVariables = {
+    NH_FLAKE = "/home/alice/nixos-config";
+  };
+
+  home.stateVersion = "26.05";
+  programs.home-manager.enable = true;
+}
+
+==> ./modules/home/robbsbro.nix <==
+{
+  pkgs,
+  inputs,
+  ...
+}: {
+  # 1. Install Robbsbro69's specific dependencies
+  home.packages = with pkgs; [
+    inputs.quickshell.packages.${pkgs.system}.default
+    pywal # Generates live color palettes
+    cava # Audio visualizer used in their Quickshell music panel
+    kitty # Their terminal of choice
+    awww # Or keep swaybg if you prefer
+    pamixer
+    playerctl
+    brightnessctl
+  ];
+
+  # 2. Map their dotfiles into your ~/.config directory
+  # This tricks their Quickshell setup into thinking it's running natively
+  xdg.configFile = {
+    "quickshell".source = ./robbs-dots/quickshell;
+    "cava".source = ./robbs-dots/cava;
+    "kitty".source = ./robbs-dots/kitty;
+  };
+
+  # 3. Pywal initial setup script (runs on login)
+  home.activation.pywal = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
+    # Generate a default colorscheme so Quickshell doesn't crash on first boot
+    ${pkgs.pywal}/bin/wal -i /home/alice/Pictures/catppuccin-wallpaper.jpg -n -q
+  '';
+}
+
+==> ./modules/home/dev/terminal.nix <==
+{
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
+  imports = [
+    ./bash.nix
+    ./starship.nix
+    ./zsh.nix
+  ];
+
+  # 1. Install Terminal Packages
+  home.packages = with pkgs; [
+    # The Terminal itself (Unstable for latest features)
+    pkgs-unstable.ghostty
+
+    # Fonts required for icons (Nerd Fonts)
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.symbols-only
+  ];
+
+  # 2. Ghostty Configuration
+  # Ghostty reads from ~/.config/ghostty/config
+  xdg.configFile."ghostty/config".text = ''
+    # --- Fonts ---
+    font-family = "JetBrainsMono Nerd Font"
+    font-size = 12
+
+    # --- Theme ---
+    # Ghostty has built-in support for Dracula
+    theme = Dracula
+
+    # --- Window UI ---
+    window-decoration = true
+    gtk-titlebar = true
+
+    # --- Integration ---
+    # Adjust this if you use bash instead of zsh
+    shell-integration = zsh
+
+    # --- Clipboard ---
+    clipboard-read = allow
+    clipboard-write = allow
+
+    # --- Cursor ---
+    cursor-style = block
+    cursor-style-blink = false
+
+    # --- Optimization ---
+    # fast-scroll = true
+  '';
+
+  # Ensure fontconfig picks up the new fonts
+  fonts.fontconfig.enable = true;
+}
+
+==> ./modules/home/dev/bash.nix <==
+{pkgs, ...}: {
+  programs.bash = {
+    enable = true;
+    enableCompletion = true;
+
+    # History settings
+    historyControl = [
+      "erasedups"
+      "ignorespace"
+    ];
+    historyFileSize = 10000;
+    historySize = 10000;
+
+    shellAliases = {
+      ".." = "cd ..";
+      "..." = "cd ../..";
+      ls = "eza --icons --group-directories-first";
+      ll = "eza -al --icons --group-directories-first";
+      cat = "bat --style=plain";
+    };
+
+    # Bash-specific options
+    shellOptions = [
+      "histappend"
+      "checkwinsize"
+      "extglob"
+      "globstar"
+      "checkjobs"
+    ];
+
+    # Code that runs on startup
+    initExtra = ''
+      # Print a clean system & environment status
+      ${pkgs.fastfetch}/bin/fastfetch
+    '';
+  };
+}
+
+==> ./modules/home/dev/neovim.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: {
+  # Only enable if the master dev-tools switch is on
+  config = lib.mkIf config.modules.dev.tools.enable {
+    # 1. Neovim Package & Dependencies
+    programs.neovim = {
+      enable = true;
+      package = pkgs-unstable.neovim-unwrapped; # Use Unstable for latest features
+
+      withRuby = true;
+      withPython3 = true;
+
+      defaultEditor = true;
+      viAlias = true;
+      vimAlias = true;
+
+      # We install external tools needed by plugins here
+      extraPackages = with pkgs; [
+        # Building Treesitter parsers requires a compiler
+        gcc
+        gnumake
+
+        # Tools for Telescope / Grepping
+        tree-sitter # tree-sitter-cli
+        lazygit # lazygit integration
+        fzf # fzf (v0.25+)
+        ripgrep # live grep
+        fd # find files
+        curl # completion engine download
+
+        # Language Servers (Optional - you can also use Mason inside Neovim)
+        pkgs-unstable.nixd
+        pkgs-unstable.lua-language-server
+        pkgs-unstable.nil
+
+        # Clipboard support
+        wl-clipboard # Wayland
+        # xclip      # X11 (Uncomment if needed)
+      ];
+    };
+
+    # # 2. Bootstrap Lazy.nvim
+    # # This Lua block checks if lazy is installed, clones it if not, and loads your config.
+    # xdg.configFile."nvim/init.lua".text = ''
+    #   -- Bootstrap lazy.nvim
+    #   local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+    #   if not vim.loop.fs_stat(lazypath) then
+    #     vim.fn.system({
+    #       "git",
+    #       "clone",
+    #       "--filter=blob:none",
+    #       "https://github.com/folke/lazy.nvim.git",
+    #       "--branch=stable", -- latest stable release
+    #       lazypath,
+    #     })
+    #   end
+    #   vim.opt.rtp:prepend(lazypath)
+
+    #   -- Basic Settings before loading plugins
+    #   vim.g.mapleader = " " -- Make sure to set this before lazy setup
+    #   vim.g.maplocalleader = " "
+
+    #   vim.opt.number = true
+    #   vim.opt.relativenumber = true
+    #   vim.opt.clipboard = "unnamedplus" -- Sync with system clipboard
+
+    #   -- Setup Lazy and load plugins
+    #   require("lazy").setup({
+
+    #     -- Example 1: Theme
+    #     {
+    #       "dracula/vim",
+    #       name = "dracula",
+    #       config = function()
+    #         vim.cmd("colorscheme dracula")
+    #       end
+    #     },
+
+    #     -- Example 2: Treesitter (Syntax Highlighting)
+    #     {
+    #       "nvim-treesitter/nvim-treesitter",
+    #       build = ":TSUpdate",
+    #       config = function()
+    #         require("nvim-treesitter.configs").setup({
+    #           ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "nix" },
+    #           auto_install = false, -- rely on Nix for compilers, but lazy for downloading parsers
+    #           highlight = { enable = true },
+    #         })
+    #       end
+    #     },
+
+    #     -- Example 3: Telescope (Fuzzy Finder)
+    #     {
+    #       "nvim-telescope/telescope.nvim",
+    #       tag = "0.1.5",
+    #       dependencies = { "nvim-lua/plenary.nvim" },
+    #       keys = {
+    #         { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+    #         { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Grepp" },
+    #       }
+    #     },
+
+    #     -- Example 4: LSP Support
+    #     {
+    #       "neovim/nvim-lspconfig",
+    #       config = function()
+    #         local lspconfig = require("lspconfig")
+    #         -- Nixd is installed via Home Manager (extraPackages above)
+    #         lspconfig.nixd.setup({})
+    #       end
+    #     }
+
+    #   })
+    # '';
+  };
+}
+
+==> ./modules/home/dev/starship.nix <==
+{lib, ...}: {
+  programs.starship = {
+    enable = true;
+
+    # Auto-integrate with Zsh
+    enableZshIntegration = true;
+
+    settings = {
+      add_newline = true;
+
+      # The layout of the prompt
+      format = lib.concatStrings [
+        "$os"
+        "$directory"
+        "$git_branch"
+        "$git_status"
+        "$nix_shell"
+        "$nodejs"
+        "$python"
+        "$line_break"
+        "$character"
+      ];
+
+      # --- Modules Configuration ---
+
+      os = {
+        disabled = false;
+        format = "[$symbol]($style) ";
+        symbols = {
+          NixOS = "❄️";
+        };
+      };
+
+      directory = {
+        style = "bold blue";
+        read_only = " 🔒";
+        truncation_length = 3;
+        truncate_to_repo = true;
+      };
+
+      git_branch = {
+        symbol = "🌱 ";
+        style = "bold purple";
+      };
+
+      git_status = {
+        style = "bold red";
+        ahead = "⇡\${count}";
+        diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
+        behind = "⇣\${count}";
+      };
+
+      # Crucial for NixOS: Tells you when you are in a dev shell
+      nix_shell = {
+        disabled = false;
+        impure_msg = "[impure](bold red)";
+        pure_msg = "[pure](bold green)";
+        format = "via [☃️ $state( \($name\))](bold blue) ";
+      };
+
+      character = {
+        success_symbol = "[➜](bold green)";
+        error_symbol = "[✗](bold red)";
+      };
+
+      cmd_duration = {
+        min_time = 2000; # Only show if command took more than 2 seconds
+        format = "took [$duration]($style) ";
+      };
+    };
+  };
+}
+
+==> ./modules/home/dev/git-config.nix <==
+{pkgs, ...}: {
+  home.packages = with pkgs; [
+    git
+    gnupg
+    pinentry-qt
+  ];
+
+  services.gpg-agent = {
+    enable = true;
+    enableSshSupport = true;
+    pinentry.package = pkgs.pinentry-qt;
+  };
+
+  programs.git = {
+    enable = true;
+
+    settings = {
+      init.defaultBranch = "main";
+      pull.rebase = false;
+    };
+
+    includes = [
+      {
+        condition = "gitdir:~/nixos-config/";
+        path = pkgs.writeText "gitconfig-nixos" ''
+          [user]
+            name = vijetasatyam
+            email = vijetasatyam@gmail.com
+            # YOUR BRAND NEW KEY ID
+            signingkey = 6D6783A58A88C6D07F9D2A6BDF58C829520F1B07
+
+          [commit]
+            gpgsign = true
+
+          [tag]
+            gpgsign = true
+        '';
+      }
+    ];
+  };
+}
+
+==> ./modules/home/dev/development-tools.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: {
+  # 1. Imports (The Hub)
+  # Importing these here makes this file the "Parent" of the dev suite.
+  # You can remove these imports from home.nix if you want to keep home.nix clean.
+  imports = [
+    ./vscode.nix
+    ./vscodium.nix
+    ./neovim.nix
+  ];
+
+  # 2. Define the Option
+  options = {
+    modules.dev.tools = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable development tools (VS Code, direnv, zed, etc)";
+      };
+    };
+  };
+
+  # 3. The Configuration (Only runs if enable = true)
+  config = lib.mkIf config.modules.dev.tools.enable {
+    # Packages
+    home.packages = [
+      # Stable
+      pkgs.zed-editor
+      pkgs.devpod
+      pkgs.devpod-desktop
+
+      # Unstable
+      pkgs-unstable.nixd
+      pkgs-unstable.nil
+    ];
+
+    # Direnv (Home Manager Native Module)
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+      enableBashIntegration = true;
+    };
+  };
+}
+
+==> ./modules/home/dev/vscode.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: let
+  vscodeSettings = {
+    "telemetry.telemetryLevel" = "off";
+    "datatools.enableTelemetry" = false;
+    "browser-preview.enableTelemetry" = false;
+    "update.mode" = "none";
+    "extensions.autoCheckUpdates" = false;
+    "extensions.autoUpdate" = false;
+    "workbench.enableExperiments" = false;
+    "workbench.settings.enableNaturalLanguageSearch" = false;
+    "workbench.accounts.showProfiles" = false;
+    "files.hotExit" = "off";
+    "workbench.cloudChanges.autoSync" = false;
+    "workbench.sync.enable" = false;
+    "search.searchOnType" = false;
+    "typescript.surveys.enabled" = false;
+    "telemetry.enableCrashReporter" = false;
+    "workbench.startupEditor" = "none";
+    "workbench.tips.enabled" = false;
+    "editor.links" = false;
+    "breadcrumbs.enabled" = false;
+    "ai.suggest.enabled" = false;
+    "github.copilot.enable" = {"*" = false;};
+    "github.copilot.editor.enableAutoCompletions" = false;
+    "intellicode.features.python.deepLearning" = "disabled";
+    "extensions.ignoreRecommendations" = true;
+    "workbench.extension.commandDiscovery" = false;
+    "extensions.showRecommendationsOnlyOnDemand" = true;
+  };
+
+  vscodePrivate = pkgs-unstable.vscode.overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [pkgs.makeWrapper];
+    postInstall =
+      (oldAttrs.postInstall or "")
+      + ''
+        find $out -name "microsoft-authentication" -type d -exec rm -rf {} +
+        find $out -name "github-authentication" -type d -exec rm -rf {} +
+        find $out -name "microsoft-account" -type d -exec rm -rf {} +
+      '';
+    postFixup =
+      (oldAttrs.postFixup or "")
+      + ''
+        wrapProgram $out/bin/code \
+          --add-flags "--disable-telemetry" \
+          --add-flags "--disable-crash-reporter" \
+          --add-flags "--disable-extension-telemetry" \
+          --add-flags "--disable-userdata-auth" \
+          --add-flags "--disable-features=Sync" \
+          --add-flags "--no-proxy-server" \
+          --add-flags "--user-data-dir ~/.config/Code-Isolated"
+      '';
+  });
+in {
+  config = lib.mkIf config.modules.dev.tools.enable {
+    # FIX: Use lib.lowPrio to resolve file conflicts with VSCodium
+    home.packages = [(lib.lowPrio vscodePrivate)];
+
+    xdg.configFile."Code-Isolated/User/settings.json" = {
+      source = pkgs.writeText "vscode-settings.json" (builtins.toJSON vscodeSettings);
+      force = true;
+    };
+
+    home.sessionVariables = {
+      DO_NOT_TRACK = "1";
+      ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
+    };
+  };
+}
+
+==> ./modules/home/dev/vscodium.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  pkgs-unstable,
+  ...
+}: let
+  # 1. Hardened Settings (Preserved Exactly)
+  vscodiumSettings = {
+    "telemetry.telemetryLevel" = "off";
+    "update.mode" = "none";
+    "workbench.settings.enableNaturalLanguageSearch" = false;
+    "workbench.accounts.showProfiles" = false;
+    "extensions.autoCheckUpdates" = false;
+    "extensions.autoUpdate" = false;
+    "workbench.startupEditor" = "none";
+    "editor.links" = false;
+    "breadcrumbs.enabled" = false;
+    "ai.suggest.enabled" = false;
+    "github.copilot.enable" = {"*" = false;};
+  };
+
+  # 2. Custom Package: Marketplace Injection + Identity Spoofing
+  vscodiumIsolated = pkgs-unstable.vscodium.overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [pkgs.makeWrapper];
+
+    # The Logic: Inject Marketplace URLs & Spoof Identity
+    preFixup =
+      (oldAttrs.preFixup or "")
+      + ''
+              product_json=$(find $out/lib -path "*/resources/app/product.json" | head -n 1)
+              if [ -z "$product_json" ]; then echo "Error: product.json missing"; exit 1; fi
+
+              ${pkgs.python3}/bin/python3 <<EOF
+        import json
+        with open('$product_json', 'r') as f:
+            data = json.load(f)
+
+        # 1. Enable Official Marketplace
+        data['extensionsGallery'] = {
+            'serviceUrl': 'https://marketplace.visualstudio.com/_apis/public/gallery',
+            'cacheUrl': 'https://vscode.blob.core.windows.net/gallery/index',
+            'itemUrl': 'https://marketplace.visualstudio.com/items'
+        }
+
+        # 2. Identity Spoofing for Remote-SSH Support
+        # This tricks extensions into thinking this is the official VSCode binary
+        data['quality'] = 'stable'
+        # We pull the version string from the unstable VSCode package
+        data['commit'] = '${pkgs-unstable.vscode.version}'
+
+        with open('$product_json', 'w') as f:
+            json.dump(data, f, indent=4)
+        EOF
+      '';
+
+    postInstall =
+      (oldAttrs.postInstall or "")
+      + ''
+        find $out -name "microsoft-authentication" -type d -exec rm -rf {} +
+        find $out -name "github-authentication" -type d -exec rm -rf {} +
+        find $out -name "microsoft-account" -type d -exec rm -rf {} +
+      '';
+
+    postFixup =
+      (oldAttrs.postFixup or "")
+      + ''
+        wrapProgram $out/bin/codium \
+          --add-flags "--disable-telemetry" \
+          --add-flags "--disable-crash-reporter" \
+          --add-flags "--disable-userdata-auth" \
+          --add-flags "--user-data-dir ~/.config/VSCodium-Isolated"
+      '';
+  });
+in {
+  # 3. Modular Activation
+  config = lib.mkIf config.modules.dev.tools.enable {
+    home.packages = [
+      vscodiumIsolated
+      # Aliases to run it easily (Preserved from old config)
+      (pkgs.writeShellScriptBin "vscodium" "exec ${vscodiumIsolated}/bin/codium \"$@\"")
+      (pkgs.writeShellScriptBin "codium-private" "exec ${vscodiumIsolated}/bin/codium \"$@\"")
+    ];
+
+    # Write settings.json declaratively
+    xdg.configFile."VSCodium-Isolated/User/settings.json" = {
+      source = pkgs.writeText "vscodium-settings.json" (builtins.toJSON vscodiumSettings);
+      force = true;
+    };
+  };
+}
+
+==> ./modules/home/dev/zsh.nix <==
+{
+  # config,
+  pkgs,
+  ...
+}: {
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+
+    # Oh My Zsh (The framework for plugins)
+    oh-my-zsh = {
+      enable = true;
+      plugins = [
+        "git"
+        "sudo"
+        "docker"
+        "kubectl"
+      ];
+      # We intentionally leave the theme blank here so Starship can take over!
+    };
+
+    # Aliases (These override system aliases if conflicts exist)
+    shellAliases = {
+      # Visual upgrades using packages you already have
+      ls = "eza --icons --group-directories-first";
+      ll = "eza -al --icons --group-directories-first";
+      cat = "bat --style=plain";
+
+      # The Unstable Shell shortcut
+      ush = "nix shell github:nixos/nixpkgs/nixos-unstable#$1 --impure";
+
+      # Quick navigation
+      ".." = "cd ..";
+      "..." = "cd ../..";
+      ".3" = "cd ../../..";
+
+      # Git shortcuts (Preserved exactly as you had them)
+      g = "git";
+      ga = "git add";
+      gc = "git commit";
+      gp = "git push";
+    };
+
+    # Extra Config (e.g. init scripts)
+    # Changed from 'initContent' to 'initExtra' to ensure Home Manager injects it perfectly
+    initContent = ''
+      # fastfetch on start
+      ${pkgs.fastfetch}/bin/fastfetch
+    '';
+  };
+}
+
+==> ./modules/home/compositor/caelestia.nix <==
+{
+  pkgs,
+  inputs,
+  theme,
+  ...
+}: {
+  home.packages = with pkgs; [
+    # Quickshell from Flake
+    inputs.quickshell.packages.${pkgs.system}.default
+
+    # Material You dynamic palette generator
+    matugen
+
+    # Shell dependencies
+    wireplumber
+    brightnessctl
+    playerctl
+    networkmanager
+    bluez
+    socat
+    jq
+    libnotify
+
+    # Typography & Icons required by Caelestia
+    material-symbols
+    rubik
+    nerd-fonts.jetbrains-mono
+  ];
+
+  # Symlink Caelestia upstream QML files into ~/.config/quickshell
+  xdg.configFile."quickshell".source = inputs.caelestia-shell.outPath;
+
+  # Initialize Matugen palette from your Catppuccin wallpaper
+  home.activation.matugen = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ -f "/home/alice/Pictures/catppuccin-wallpaper.jpg" ]; then
+      ${pkgs.matugen}/bin/matugen image /home/alice/Pictures/catppuccin-wallpaper.jpg -m dark
+    fi
+  '';
+}
+
+==> ./modules/home/compositor/quickshell.nix <==
+{
+  pkgs,
+  inputs,
+  theme,
+  # system,
+  ...
+}: {
+  # Install the Quickshell package directly from the flake input
+  home.packages = [
+    inputs.quickshell.packages.${pkgs.system}.default
+  ];
+
+  # Write the QML file that Quickshell reads on startup
+  xdg.configFile."quickshell/shell.qml".text = ''
+    import QtQuick
+    import Quickshell
+
+    ShellRoot {
+        PanelWindow {
+            id: topBar
+            anchors {
+                top: true
+                left: true
+                right: true
+            }
+
+            // The floating "Air" effect
+            margins {
+                top: 8
+                left: 16
+                right: 16
+            }
+
+            implicitHeight: 40
+            color: "transparent"
+
+            // The actual visual bar
+            Rectangle {
+                anchors.fill: parent
+                color: "${theme.bg}"
+                radius: 16
+                border.color: "${theme.surface}"
+                border.width: 2
+
+                // Left side: Workspaces (Placeholder logic)
+                Row {
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                        leftMargin: 16
+                    }
+                    spacing: 8
+
+                    Repeater {
+                        model: 4
+                        Rectangle {
+                            width: 12
+                            height: 12
+                            radius: 6
+                            // Highlight the first one as "active"
+                            color: index === 0 ? "${theme.accent}" : "${theme.surface}"
+
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                        }
+                    }
+                }
+
+                // Center: Clock
+                Text {
+                    anchors.centerIn: parent
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "${theme.active}"
+
+                    // A simple timer to update the clock
+                    text: Qt.formatDateTime(new Date(), "hh:mm ap")
+                    Timer {
+                        interval: 1000
+                        running: true
+                        repeat: true
+                        onTriggered: parent.text = Qt.formatDateTime(new Date(), "hh:mm ap")
+                    }
+                }
+
+                // Right side: System Tray / Status
+                Row {
+                    anchors {
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        rightMargin: 16
+                    }
+                    spacing: 16
+
+                    Text {
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+                        color: "${theme.success}"
+                        text: "󰕾 100%"
+                    }
+                    Text {
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+                        color: "${theme.warning}"
+                        text: "󰖩"
+                    }
+                }
+            }
+        }
+    }
+  '';
+}
+
+==> ./modules/home/compositor/swaync.nix <==
+{
+  # pkgs,
+  # theme,
+  ...
+}: {
+  services.swaync = {
+    enable = true;
+    # You can further customize the JSON/CSS for SwayNC here,
+    # but the default styling works great out of the box with Catppuccin.
+  };
+}
+
+==> ./modules/home/compositor/waybar.nix <==
+{
+  #pkgs,
+  theme,
+  ...
+}: {
+  programs.waybar = {
+    enable = true;
+    settings = {
+      mainBar = {
+        layer = "top";
+        position = "top";
+        # Detach the bar from the edges
+        margin-top = 5;
+        margin-left = 10;
+        margin-right = 10;
+        margin-bottom = 5;
+        height = 40;
+        spacing = 8;
+
+        modules-left = ["niri/workspaces" "niri/window"];
+        modules-center = ["clock"];
+        modules-right = ["pulseaudio" "network" "battery" "tray"];
+
+        "niri/workspaces" = {
+          format = "{icon}";
+          format-icons = {
+            active = "";
+            default = "";
+          };
+        };
+
+        "niri/window" = {
+          format = "{}";
+          max-length = 40;
+        };
+
+        "clock" = {
+          format = "  {:%I:%M %p}";
+          tooltip-format = "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
+        };
+
+        "pulseaudio" = {
+          format = "{icon}  {volume}%";
+          format-muted = "󰝟  Muted";
+          format-icons = ["󰕿" "󰖀" "󰕾"];
+          on-click = "pavucontrol";
+        };
+
+        "network" = {
+          format-wifi = "󰖩  {essid}";
+          format-ethernet = "󰈀  {ipaddr}";
+          format-disconnected = "󰖪  Offline";
+        };
+
+        "battery" = {
+          format = "{icon}  {capacity}%";
+          format-icons = ["" "" "" "" ""];
+        };
+      };
+    };
+
+    style = ''
+      * {
+        font-family: "JetBrainsMono Nerd Font", "sans-serif";
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        border-radius: 0;
+        min-height: 0;
+      }
+
+      window#waybar {
+        background: transparent;
+        color: ${theme.text};
+        padding-top: 1px;
+      }
+
+      #workspaces, #window, #clock, #pulseaudio, #network, #battery, #tray {
+        background-color: ${theme.bg};
+        color: ${theme.text};
+        border-radius: 16px;
+        padding: 4px 16px;
+        margin-bottom: 0px;
+      }
+
+      #workspaces { background-color: ${theme.bg}; }
+      #workspaces button {
+        color: ${theme.surface};
+        padding: 0 4px;
+        transition: all 0.2s ease-in-out;
+      }
+
+      #workspaces button.active {
+        color: ${theme.accent};
+        text-shadow: 0px 0px 5px ${theme.accent};
+      }
+
+      #workspaces button:hover {
+        background: transparent;
+        color: ${theme.border};
+      }
+
+      #clock { color: ${theme.active}; }
+      #pulseaudio { color: ${theme.success}; }
+      #network { color: ${theme.warning}; }
+      #battery { color: ${theme.urgent}; }
+    '';
+  };
+}
+
+==> ./modules/home/compositor/niri.nix <==
+{
+  pkgs,
+  theme,
+  ...
+}: {
+  home.packages = with pkgs; [
+    fuzzel
+    papirus-icon-theme
+    swaybg
+    grim
+    slurp
+    wl-clipboard
+    cliphist
+    nwg-look
+    mission-center
+    htop
+  ];
+
+  xdg.configFile."niri/config.kdl".text = ''
+    input {
+        keyboard {
+            xkb {
+                layout "us"
+            }
+        }
+        touchpad {
+            tap
+            natural-scroll
+        }
+    }
+
+    layout {
+        gaps 16
+        center-focused-column "never"
+        default-column-width { proportion 0.5; }
+
+        focus-ring {
+            width 3
+            active-color "${theme.accent}"
+            inactive-color "${theme.surface}"
+        }
+    }
+
+    animations {
+        horizontal-view-movement {
+            spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
+        }
+        workspace-switch {
+            spring damping-ratio=0.8 stiffness=1000 epsilon=0.0001
+        }
+        window-open {
+            duration-ms 200
+            curve "ease-out-quad"
+        }
+        window-close {
+            duration-ms 180
+            curve "ease-out-quad"
+        }
+    }
+
+    // Rules for Caelestia surfaces and dialogs
+    window-rule { geometry-corner-radius 16; clip-to-geometry true; }
+    window-rule { match app-id=r#"^quickshell.*"#; open-floating true; }
+    window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
+
+    layer-rule {
+        match namespace="^quickshell.*"
+    }
+
+    // --- Autostart ---
+    spawn-at-startup "quickshell"
+    spawn-at-startup "bash" "/home/alice/nixos-config/scripts/niri-caelestia-bridge.sh"
+    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.jpg" "-m" "fill"
+    spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
+
+    // --- Keybindings ---
+    binds {
+        Mod+Return { spawn "ghostty"; }
+        Mod+D      { spawn "fuzzel"; }
+        Mod+Q      { close-window; }
+
+        // Caelestia Shell Drawers
+        Mod+Space { spawn "quickshell" "ipc" "call" "launcher" "toggle"; }
+        Mod+N     { spawn "quickshell" "ipc" "call" "controlCenter" "toggle"; }
+
+        // Horizontal Column & Window Switching
+        Mod+Tab       { focus-column-right; }
+        Mod+Shift+Tab { focus-column-left; }
+        Mod+Left      { focus-column-left; }
+        Mod+Right     { focus-column-right; }
+        Mod+Up        { focus-window-up; }
+        Mod+Down      { focus-window-down; }
+
+        // Moving Columns & Windows
+        Mod+Shift+Left  { move-column-left; }
+        Mod+Shift+Right { move-column-right; }
+        Mod+Shift+Up    { move-window-up; }
+        Mod+Shift+Down  { move-window-down; }
+
+        // Volume & Media Controls
+        XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+        XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+        XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+        XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "+5%"; }
+        XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+
+        Mod+Shift+Q { quit; }
+        Print { spawn "sh" "-c" "grim -g \"$(slurp)\" - | wl-copy"; }
+    }
+  '';
+
+  # Theme and Style Fuzzel dynamically using Catppuccin / Material 3 Tokens
+  xdg.configFile."fuzzel/fuzzel.ini".text = let
+    # Helper to convert "#RRGGBB" -> "RRGGBBAA"
+    toRgba = hex: alpha: (builtins.substring 1 (builtins.stringLength hex - 1) hex) + alpha;
+  in ''
+    [main]
+    font=JetBrainsMono Nerd Font:weight=medium:size=11
+    prompt="  󰍉  "
+    terminal=ghostty
+    layer=overlay
+    match-mode=fzf
+    show-actions=yes
+
+    # Layout & Geometry
+    lines=8
+    width=38
+    horizontal-pad=24
+    vertical-pad=18
+    inner-pad=12
+    line-height=24
+
+    # Application Icons
+    icons-enabled=yes
+    icon-theme=Papirus-Dark
+
+    [colors]
+    # Format: RRGGBBAA
+    background=${toRgba theme.bg "f2"}
+    text=${toRgba theme.text "ff"}
+    prompt=${toRgba theme.accent "ff"}
+    placeholder=${toRgba theme.surface "ff"}
+    input=${toRgba theme.text "ff"}
+    match=${toRgba theme.active "ff"}
+
+    # Selected Item Styling (Floating Pill)
+    selection=${toRgba theme.surface "e6"}
+    selection-text=${toRgba theme.accent "ff"}
+    selection-match=${toRgba theme.urgent "ff"}
+
+    # Border & Counter
+    border=${toRgba theme.border "ff"}
+    counter=${toRgba theme.surface "ff"}
+
+    [border]
+    width=2
+    radius=18
+    selection-radius=12
+
+    [key-bindings]
+    cancel=Escape Control+c Control+g
+    execute=Return KP_Enter
+    prev=Up Control+p Control+k
+    next=Down Control+n Control+j
+  '';
+}
+
+==> ./modules/anything_temp/usb.nix <==
+{
+  # config,
+  pkgs,
+  # lib,
+  ...
+}: {
+  # boot.kernelParams = ["usb-storage.quirks=0781:55a9:u"];
+  services.udisks2.enable = true;
+  services.gvfs.enable = true;
+  environment.systemPackages = [
+    pkgs.udiskie
+  ];
+}
+
+==> ./modules/core/extra-config.nix <==
+{
+  # config,
+  # pkgs,
+  ...
+}: {
+  # --- 1. Nix Settings ---
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    auto-optimise-store = true;
+
+    # Prevent "Buffer Full" warning
+    download-buffer-size = 536870912;
+  };
+
+  # --- 2. Garbage Collection ---
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 7d";
+  };
+
+  # THE FIX: The Python overlays for kubernetes/aiohappyeyeballs have been removed.
+  # This stops the "butterfly effect" that forced QEMU and Libvirt to compile from source.
+
+  # --- 5. Technical Debt ---
+  system.stateVersion = "26.05";
+}
+
+==> ./modules/core/system_bootloader.nix <==
+{
+  # config,
+  pkgs,
+  # lib,
+  ...
+}: {
+  # --- 1. Global Boot Settings ---
+  boot.loader.systemd-boot.enable = false;
+  boot.loader.refind.enable = false;
+  boot.loader.efi.canTouchEfiVariables = true;
+
+  # --- 2. GRUB Configuration ---
+  boot.loader.grub = {
+    enable = true;
+    device = "nodev";
+    efiSupport = true;
+    useOSProber = true;
+
+    # Match the resolution of the Sekiro assets
+    gfxmodeEfi = "1920x1080";
+
+    # Force the Graphical Terminal and specific modules
+    extraConfig = ''
+      set gfxpayload=keep
+      insmod all_video
+      insmod gfxterm
+      insmod png
+      insmod jpeg
+      insmod font
+      terminal_output gfxterm
+    '';
+
+    # --- 3. Sekiro Theme Derivation ---
+    theme = pkgs.stdenv.mkDerivation {
+      pname = "sekiro-grub-theme";
+      version = "1.0";
+
+      src = pkgs.fetchFromGitHub {
+        owner = "AbijithBalaji";
+        repo = "sekiro_grub_theme";
+        rev = "master";
+        # Ensure this hash matches your local 'nix build' result
+        hash = "sha256-uXwDjb0+ViQvdesG5gefC5zFAiFs/FfDfeI5t7vP+Qc=";
+      };
+
+      installPhase = ''
+        mkdir -p $out
+        # The Sekiro theme files are in a subfolder in this repo
+        # We move everything from the 'Sekiro' folder to the root of $out
+        cp -r Sekiro/* $out/
+
+        # GRUB needs a background.png reference usually
+        cp $out/sekiro_1920x1080.png $out/background.png
+      '';
+    };
+  };
+}
+
+==> ./modules/core/aliases.nix <==
+{
+  # config,
+  # pkgs,
+  # lib,
+  ...
+}: {
+  environment.shellAliases = {
+    # --- System Management ---
+    rebuild = "bash ~/nixos-config/scripts/rebuild.sh";
+    revert = "bash ~/nixos-config/scripts/revert.sh";
+    clean-sh = "bash ~/nixos-config/scripts/clean.sh";
+
+    clean = "nh clean all --keep 3"; # Keeps last 3 generations
+    update = "nh os boot --update"; # Updates flake lock and builds
+
+    # Dry-run to check for errors before applying
+    check = "sudo nixos-rebuild dry-activate";
+    # List all system generations
+    gen = "sudo nix-env -p /nix/var/nix/profiles/system --list-generations";
+
+    # Garbage Collection & Optimization
+    nix-clean = "sudo nix-collect-garbage -d && sudo nix-store --optimise -v";
+
+    # Upgrade: Updates all channels (Stable + Unstable) and then rebuilds
+    upgrade = "sudo nix-channel --update && sudo nixos-rebuild switch";
+
+    # Rollback: Quickly switch to the previous working generation
+    rollback = "sudo nixos-rebuild switch --rollback";
+
+    # --- Navigation & Configuration ---
+    conf = "cd ~/nixos-config";
+    edit = "cd ~/nixos-config && zed .";
+    sync = "git push origin main && git push github main";
+
+    # --- Development & Containers ---
+    # Switch between Podman (Rootless/Privacy) and Real Docker (Daemon)
+    use-docker = "export DOCKER_HOST=unix:///var/run/docker.sock";
+    use-podman = "export DOCKER_HOST=unix://\$XDG_RUNTIME_DIR/podman/podman.sock";
+
+    # VSCodium Shortcuts
+    codium-isolated = "vscodium --user-data-dir ~/.config/VSCodium-Isolated";
+
+    # --- Quality of Life ---
+    ls = "ls --color=auto";
+    ll = "ls -l";
+    grep = "grep --color=auto";
+    ".." = "cd ..";
+    "..." = "cd ../..";
+    cat = "bat --style=plain";
+  };
+
+  # This ensures that even in subshells or different environments,
+  # the DOCKER_HOST defaults to the privacy-focused Podman socket.
+  environment.variables = {
+    DOCKER_HOST = "unix://\$XDG_RUNTIME_DIR/podman/podman.sock";
+  };
+}
+
+==> ./modules/core/system.nix <==
+{
+  # config,
+  # pkgs,
+  # lib,
+  ...
+}: {
+  # --- Bootloader ---
+  imports = [
+    ./system_bootloader.nix
+  ];
+
+  # Desktop manager
+  # programs.xwayland.enable = true;
+  # programs.mango.enable = true;
+
+  # Timezone (Keeping physical location correct)
+  time.timeZone = "Asia/Kolkata";
+
+  # Select internationalisation properties
+  # "Keep everything US" -> Setting all locales to en_US.UTF-8
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  i18n.extraLocaleSettings = {
+    LC_ADDRESS = "en_US.UTF-8";
+    LC_IDENTIFICATION = "en_US.UTF-8";
+    LC_MEASUREMENT = "en_US.UTF-8";
+    LC_MONETARY = "en_US.UTF-8";
+    LC_NAME = "en_US.UTF-8";
+    LC_NUMERIC = "en_US.UTF-8";
+    LC_PAPER = "en_US.UTF-8";
+    LC_TELEPHONE = "en_US.UTF-8";
+    LC_TIME = "en_US.UTF-8";
+  };
+}
+
+==> ./modules/core/flathub.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
+  options.modules.core.flatpak = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Flatpak support and Flathub repository";
+    };
+  };
+
+  config = lib.mkIf config.modules.core.flatpak.enable {
+    # 1. Enable the Flatpak Service
+    services.flatpak.enable = true;
+
+    # 2. Fix for Fonts and Icons
+    # This ensures Flatpak apps can see your system fonts/icons
+    fonts.fontDir.enable = true;
+
+    # 3. Automatically add Flathub repository on system activation
+    # This script runs every time you rebuild to ensure Flathub is ready
+    system.activationScripts.flathub = {
+      text = ''
+        ${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      '';
+    };
+  };
+}
+
+==> ./modules/core/users.nix <==
+{
+  # config,
+  # pkgs,
+  # lib,
+  ...
+}: {
+  # User and Accounts.
+
+  users.users = {
+    alice = {
+      isNormalUser = true;
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+      ];
+
+      #packages = with pkgs; [
+      #  thunderbird
+      #];
+    };
+  };
+
+  # password-less sudo.
+
+  security.sudo.extraRules = [
+    {
+      users = ["alice"];
+      commands = [
+        {
+          command = "ALL";
+          options = ["NOPASSWD"];
+        }
+      ];
+    }
+  ];
+}
+
+==> ./modules/core/services.nix <==
+{
+  config,
+  # pkgs,
+  lib,
+  ...
+}: {
+  options = {
+    modules.core.services = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable standard system services (SSH, Audio, Printing)";
+      };
+    };
+  };
+
+  config = lib.mkIf config.modules.core.services.enable {
+    # Universal Secret Storage
+    services.dbus.enable = true;
+    services.gnome.gnome-keyring.enable = true;
+
+    # Enable SSH Support
+    services.openssh.enable = true;
+
+    # Enable CUPS to print documents
+    services.printing.enable = true;
+
+    # Enable sound with pipewire
+    services.pulseaudio.enable = false;
+    security.rtkit.enable = true;
+    services.pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
+  };
+}
+
+==> ./modules/core/networking.nix <==
+{
+  # config,
+  # pkgs,
+  # lib,
+  ...
+}: {
+  # Networking and Firewall.
+
+  networking.hostName = "sage"; # Define your hostname.
+  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+
+  # Configure network proxy if necessary
+  # networking.proxy.default = "http://user:password@proxy:port/";
+  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+
+  # Enable networking
+  networking.networkmanager.enable = true;
+
+  # Open ports in the firewall.
+  # networking.firewall.allowedTCPPorts = [ 22 ];
+  # networking.firewall.allowedUDPPorts = [ ... ];
+  # Or disable the firewall altogether.
+  networking.firewall.enable = true;
+}
+
+==> ./modules/core/vmware.nix <==
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
+  options.modules.vmware.enable = lib.mkEnableOption "VMware Guest Services";
+
+  config = lib.mkIf config.modules.vmware.enable {
+    # This core setting handles the service and kernel drivers
+    virtualisation.vmware.guest.enable = true;
+
+    # This makes the command-line utilities available in your terminal
+    environment.systemPackages = with pkgs; [
+      open-vm-tools
+    ];
+  };
+}
+
+==> ./modules/core/blocklist.nix <==
+{
+  # config,
+  # pkgs,
+  ...
+}: let
+  blocked-domains = [
+    "telemetry.msedge.net"
+    "vortex.data.microsoft.com"
+    "settings-win.data.microsoft.com"
+    "dc.services.visualstudio.com"
+    "copilot-proxy.githubusercontent.com"
+    "api.githubcopilot.com"
+    "default.exp-external-gpts.ext-invoker.intellij.net"
+    "vscode-queries.algolia.net"
+    "mobile.events.data.microsoft.com"
+    "skypegraph.microsoft.com"
+    "vscode-sync.trafficmanager.net"
+    "vscode-sync.azurewebsites.net"
+  ];
+in {
+  # Map 127.0.0.1 to all blocked domains in /etc/hosts
+  networking.hosts."127.0.0.1" = blocked-domains;
+}
+
+==> ./modules/core/niri.nix <==
+{pkgs, ...}: {
+  # Enable Niri at the system level
+  programs.niri.enable = true;
+
+  # Polkit is required for privilege escalation in Wayland (e.g., GUI sudo)
+  security.polkit.enable = true;
+
+  # Use greetd as a lightweight Display Manager
+  services.greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        # Drops you into a TUI login screen, logs into Niri upon success
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd niri-session";
+        user = "alice";
+      };
+    };
+  };
+
+  # Hint Electron apps to use Wayland natively
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
+}
+
+==> ./modules/apps/unstable-packages.nix <==
+{
+  # config,
+  # pkgs,
+  pkgs-unstable,
+  ...
+}: {
+  environment.systemPackages = [
+    # Obsidian works great from unstable
+    pkgs-unstable.obsidian
+
+    # Recommended: Vesktop instead of Discord for better Wayland support
+    pkgs-unstable.vesktop
+
+    # If you prefer standard Discord:
+    # pkgs-unstable.discord
+  ];
+
+  # This variable fixes blurry text and screen sharing for Obsidian/Discord
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
+}
+
+==> ./modules/apps/env-packages.nix <==
+{
+  # config,
+  pkgs,
+  ...
+}: {
+  # Programs and Packages.
+
+  # List packages installed in system profile. To search, run:
+
+  # $ nix search wget
+
+  environment.systemPackages = with pkgs; [
+    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    wget
+    fastfetch
+    btop
+    htop
+    kdePackages.dolphin
+    zip
+    unzip
+
+    # nix versioning tools
+    nvd
+    nvdtools
+    nix-diff
+  ];
+
+  # Program specific settings and services.
+
+  # Firefox.
+  programs.firefox = {
+    enable = true;
+    policies = {
+      DisableTelemetry = true;
+      DisableFirefoxStudies = true;
+      EnableTrackingProtection = {
+        Value = true;
+        Locked = true;
+      };
+    };
+  };
+}
+
+==> ./modules/dev/winboat.nix <==
+{
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
+  # This adds winboat to the pkgs collection so you can use it anywhere
+  nixpkgs.overlays = [
+    (final: prev: {
+      winboat = final.callPackage ../../extra-apps/winboat/package.nix {
+        nodejs = pkgs-unstable.nodejs_24;
+      };
+    })
+  ];
+
+  # This actually installs it into the system environment
+  environment.systemPackages = [
+    pkgs.winboat
+  ];
+}
+
+==> ./modules/dev/containers.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
+  options.modules.core.containers = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable container runtimes (Podman, Docker, Distrobox)";
+    };
+  };
+
+  config = lib.mkIf config.modules.core.containers.enable {
+    # --- 1. Real Docker (System-wide Daemon) ---
+    virtualisation.docker = {
+      enable = true;
+      # This provides the traditional /var/run/docker.sock
+    };
+
+    # --- 2. Podman (Rootless/User-local) ---
+    virtualisation.podman = {
+      enable = true;
+      # We turn OFF compatibility so 'docker' refers to the real Docker binary,
+      # and 'podman' refers to the podman binary. No confusion.
+      dockerCompat = false;
+      # This enables the rootless socket for your specific user.
+      dockerSocket.enable = false;
+    };
+
+    # --- 3. Container Tools ---
+    environment.systemPackages = with pkgs; [
+      distrobox
+      podman-compose
+      docker-compose
+      pods
+    ];
+
+    # --- 4. The "Engine Switcher" Logic ---
+    # This sets up the default behavior and gives you easy commands to swap
+    environment.extraInit = ''
+      # Set default DOCKER_HOST to Podman's rootless socket
+      # We use a check to ensure XDG_RUNTIME_DIR is set (usually is on login)
+        if [ -n "$XDG_RUNTIME_DIR" ]; then
+          export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
+        fi
+    '';
+
+    # --- 5. System Permissions ---
+    virtualisation.containers.enable = true;
+    users.users.alice.extraGroups = [
+      "docker" # Required for real Docker
+      "podman" # Required for Podman
+    ];
+  };
+}
+
+==> ./modules/dev/virtual-machines.nix <==
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
+  imports = [
+    ./containers.nix
+    # ./winboat.nix
+  ];
+
+  options.modules.core.virtualisation = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable KVM/QEMU virtualization and VM tools";
+    };
+  };
+
+  config = lib.mkIf config.modules.core.virtualisation.enable {
+    # --- 1. KVM / Libvirt ---
+    virtualisation.libvirtd = {
+      enable = true;
+      qemu = {
+        package = pkgs.qemu_full;
+        runAsRoot = true;
+      };
+    };
+
+    # --- 2. Advanced Boot & Hardware ---
+    boot.extraModprobeConfig = "options kvm_intel nested=1";
+    virtualisation.spiceUSBRedirection.enable = true;
+
+    # --- 3. GUI & Tools ---
+    programs.virt-manager.enable = true;
+
+    environment.systemPackages = with pkgs; [
+      quickemu
+      quickgui
+      gnome-boxes
+      freerdp
+      remmina
+    ];
+
+    # --- 4. User Permissions ---
+    users.users.alice.extraGroups = [
+      "libvirtd"
+      "kvm"
+    ];
+  };
+}
+
+==> ./modules/dev/dev-tools.nix <==
+{
+  # config,
+  pkgs,
+  ...
+}: {
+  # 1. NIX-LD (Required for running unpatched binaries like VSCode extensions)
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    # Common libraries often needed by unpatched binaries
+    stdenv.cc.cc.lib
+    zlib
+    openssl
+    curl
+    glib
+    util-linux
+  ];
+
+  # 2. System-Wide Dev Packages (Optional, but good for build tools)
+  environment.systemPackages = with pkgs; [
+    gnumake
+    gcc
+    pkg-config
+    unzip
+    wget
+    tree
+  ];
+}
+
+==> ./extra-apps/winboat/package.nix <==
+{
+  lib,
+  electron,
+  zip,
+  nodejs,
+  makeWrapper,
+  udev,
+  usbutils,
+  freerdp,
+  docker-compose,
+  podman-compose,
+  pkgsCross,
+  buildNpmPackage,
+  fetchFromGitHub,
+  makeDesktopItem,
+  copyDesktopItems,
+  nix-update-script,
+  hicolor-icon-theme,
+}:
+buildNpmPackage (final: {
+  pname = "winboat";
+  version = "0.9.0";
+
+  src = fetchFromGitHub {
+    owner = "TibixDev";
+    repo = "winboat";
+    tag = "v${final.version}";
+    hash = "sha256-DgH6CAZf+XIgBav2xd2FF2MGRgGIyOs/98vqWHA3XYw=";
+  };
+
+  postPatch = ''
+    substituteInPlace package.json \
+      --replace-fail "main/main.js" "src/main/main.ts"
+  '';
+
+  nativeBuildInputs = [
+    zip
+    makeWrapper
+    copyDesktopItems
+    hicolor-icon-theme
+  ];
+
+  buildInputs = [udev];
+
+  env.ELECTRON_SKIP_BINARY_DOWNLOAD = 1;
+  npmDepsHash = "sha256-DLkI9a030uM2X1et94e4nd/HEyw5ugtK8NEAn/J8p9U=";
+  nodejs = nodejs;
+  makeCacheWritable = true;
+
+  guest-server = pkgsCross.mingwW64.callPackage ./guest-server.nix {};
+  passthru = {
+    guest-server = final.guest-server;
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--subpackage"
+        "guest-server"
+      ];
+    };
+  };
+
+  buildPhase = ''
+    node scripts/build.ts
+    npm exec electron-builder --linux -- \
+      --dir \
+      -c.electronDist=${electron.dist} \
+      -c.electronVersion=${electron.version}
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    # install built artifacts
+    mkdir -p $out/bin $out/share/winboat
+    cp -r dist/linux-unpacked/resources $out/share/winboat/resources
+
+    # install winboat icon
+    install -Dm444 icons/winboat_logo.svg $out/share/icons/hicolor/256x256/apps/winboat.svg
+
+    # copy the the winboat-guest-server executable and generate the zip
+    cp ${lib.getExe final.guest-server} $out/share/winboat/resources/guest_server/winboat_guest_server.exe
+    (cd $out/share/winboat/resources/guest_server/ && zip -r winboat_guest_server.zip .)
+
+    # symlink data/ and guest_server/ into parent folder
+    ln -sf $out/share/winboat/resources/data $out/share/winboat/data
+    ln -sf $out/share/winboat/resources/guest_server $out/share/winboat/guest_server
+
+    makeWrapper ${electron}/bin/electron $out/bin/winboat \
+      --add-flag "$out/share/winboat/resources/app.asar" \
+      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}" \
+      --suffix PATH : ${
+      lib.makeBinPath [
+        usbutils
+        docker-compose
+        podman-compose
+        freerdp
+      ]
+    }
+
+    runHook postInstall
+  '';
+
+  desktopItems = [
+    (makeDesktopItem {
+      name = "winboat";
+      desktopName = "WinBoat";
+      type = "Application";
+      exec = "winboat %U";
+      terminal = false;
+      icon = "winboat";
+      categories = ["Utility"];
+    })
+  ];
+
+  meta = {
+    mainProgram = "winboat";
+    description = "Run Windows apps on Linux with seamless integration";
+    homepage = "https://github.com/TibixDev/winboat";
+    changelog = "https://github.com/TibixDev/winboat/releases/tag/v${final.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      rexies
+      ppom
+    ];
+    platforms = ["x86_64-linux"];
+  };
+})
+
+==> ./extra-apps/winboat/guest-server.nix <==
+{
+  lib,
+  buildGoModule,
+  winboat,
+}:
+buildGoModule {
+  inherit (winboat) version src;
+  modRoot = "guest_server";
+  pname = "winboat-guest-server";
+  vendorHash = "sha256-vpBvSaqbbJ8sHNMm299z/3Qb7FKMWbr62amtKT3acYk=";
+
+  env = {
+    GOOS = "windows";
+    GOARCH = "amd64";
+    CGO_ENABLED = "0";
+    PACKAGE = "winboat-server";
+  };
+
+  ldflags = [
+    "-s"
+    "-w"
+    "-X main.Version=${winboat.version}"
+    "-X main.CommitHash=${winboat.version}"
+  ];
+
+  meta = {
+    mainProgram = "winboat-server.exe";
+    description = "Guest server for winboat";
+    homepage = "https://github.com/TibixDev/winboat";
+    changelog = "https://github.com/TibixDev/winboat/releases/tag/v${winboat.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      rexies
+      ppom
+    ];
+    platforms = ["x86_64-windows"];
+  };
+}
+
+==> ./hosts/sage/configuration.nix <==
+{
+  # config,
+  # pkgs,
+  ...
+}: {
+  imports = [
+    # --- Machine Specific ---
+    ./hardware-configuration.nix
+
+    # --- Core System Modules ---
+    ../../modules/core/aliases.nix
+    ../../modules/core/extra-config.nix
+    ../../modules/core/flathub.nix
+    ../../modules/core/networking.nix
+    ../../modules/core/niri.nix
+    ../../modules/core/services.nix
+    ../../modules/core/system.nix
+    ../../modules/core/users.nix
+    # ../../modules/core/vmware.nix
+
+    # --- NEW: System Restrictions (Hosts file blocking) ---
+    ../../modules/core/blocklist.nix
+
+    # --- Application Modules (System Wide) ---
+    ../../modules/apps/env-packages.nix
+    ../../modules/apps/unstable-packages.nix
+
+    # --- System-Level Dev Modules (VMs, Docker, Winboat) ---
+    # NOTE: These MUST stay in system config, they use virtualisation.* options
+    ../../modules/dev/dev-tools.nix
+    ../../modules/dev/virtual-machines.nix
+    # ../../modules/dev/winboat.nix
+    ../../modules/anything_temp/usb.nix
+  ];
+
+  # # Enable VMware Guest modules if needed
+  # modules.vmware.enable = true;
+}
+
+==> ./hosts/sage/hardware-configuration.nix <==
+# Do not modify this file!  It was generated by ‘nixos-generate-config’
+# and may be overwritten by future invocations.  Please make changes
+# to /etc/nixos/configuration.nix instead.
+{
+  config,
+  lib,
+  # pkgs,
+  modulesPath,
+  ...
+}: {
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
+
+  boot.initrd.availableKernelModules = [
+    "nvme"
+    "xhci_pci"
+    "usbhid"
+    "uas"
+    "sd_mod"
+  ];
+  boot.initrd.kernelModules = [];
+  boot.kernelModules = ["kvm-amd"];
+  boot.extraModulePackages = [];
+
+  fileSystems."/" = {
+    device = "/dev/disk/by-uuid/29d3a588-ad9f-4d6a-bd7b-73ba1f460937";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/2AB1-0134";
+    fsType = "vfat";
+    options = [
+      "fmask=0077"
+      "dmask=0077"
+    ];
+  };
+
+  swapDevices = [
+    {device = "/dev/disk/by-uuid/73394443-9713-4668-b9f9-92a7a08929c8";}
+  ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+}

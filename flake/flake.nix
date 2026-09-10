@@ -19,6 +19,12 @@
       url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    # 5. Caelestia Shell
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = {
@@ -27,6 +33,7 @@
     nixpkgs-unstable,
     home-manager,
     quickshell,
+    caelestia-shell,
     ...
   } @ inputs: let
     system = "x86_64-linux";
@@ -81,7 +88,10 @@
             home-manager.useUserPackages = true;
 
             # Inject 'theme' here for Home Manager modules
-            home-manager.extraSpecialArgs = {inherit inputs pkgs-unstable theme;};
+            home-manager.extraSpecialArgs = {
+              inherit inputs pkgs-unstable theme;
+              caelestia-shell = inputs.caelestia-shell;
+            };
 
             home-manager.users.alice = import ../modules/home/home.nix;
           }
