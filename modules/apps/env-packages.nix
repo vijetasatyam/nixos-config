@@ -16,6 +16,7 @@
     fastfetch
     btop
     htop
+    kdePackages.dolphin
 
     # nix versioning tools
     nvd
