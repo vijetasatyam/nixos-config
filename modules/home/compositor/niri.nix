@@ -84,8 +84,10 @@
         Mod+Q      { close-window; }
 
         // Caelestia Shell Drawers
-        Mod+Space { spawn "caelestia-shell" "ipc" "call" "launcher" "toggle"; }
-        Mod+N     { spawn "caelestia-shell" "ipc" "call" "controlCenter" "toggle"; }
+        Mod+Space { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "launcher"; }
+        Mod+N     { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "dashboard"; }
+        Mod+Escape { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "session"; }
+
 
         // Horizontal Column & Window Switching
         Mod+Tab       { focus-column-right; }
