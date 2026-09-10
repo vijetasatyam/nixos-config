@@ -14,6 +14,19 @@ clients = set()
 clients_lock = threading.Lock()
 
 
+def get_niri_json(subcommand: list):
+    try:
+        res = subprocess.run(
+            ["niri", "msg", "-j"] + subcommand,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(res.stdout)
+    except Exception:
+        return None
+
+
 def broadcast(msg: str):
     payload = (msg.strip() + "\n").encode("utf-8")
     with clients_lock:
@@ -47,7 +60,6 @@ def event_server_worker():
 
 
 def cmd_server_worker():
-    """Responds to Caelestia's queries for initial state (monitors, workspaces, etc.)"""
     if os.path.exists(CMD_SOCK):
         try:
             os.unlink(CMD_SOCK)
@@ -61,19 +73,45 @@ def cmd_server_worker():
     while True:
         try:
             conn, _ = server.accept()
-            data = conn.recv(1024).decode("utf-8", errors="ignore").strip()
+            raw = conn.recv(1024).decode("utf-8", errors="ignore").strip()
 
-            # Handle requests Caelestia sends on startup
-            if "monitors" in data:
-                # Return dummy monitor matching default output
-                resp = json.dumps(
-                    [
+            if "monitors" in raw:
+                outputs = get_niri_json(["outputs"]) or {}
+                monitors_payload = []
+                idx = 0
+                for name, out in outputs.items():
+                    monitors_payload.append(
+                        {
+                            "id": idx,
+                            "name": name,
+                            "description": out.get("make", "")
+                            + " "
+                            + out.get("model", ""),
+                            "make": out.get("make", "Unknown"),
+                            "model": out.get("model", "Display"),
+                            "serial": "",
+                            "width": out.get("current_mode", {}).get("width", 1920),
+                            "height": out.get("current_mode", {}).get("height", 1080),
+                            "refreshRate": float(
+                                out.get("current_mode", {}).get("refresh_rate", 60000)
+                            )
+                            / 1000.0,
+                            "x": out.get("logical", {}).get("x", 0),
+                            "y": out.get("logical", {}).get("y", 0),
+                            "activeWorkspace": {"id": 1, "name": "1"},
+                            "specialWorkspace": {"id": 0, "name": ""},
+                            "focused": True,
+                        }
+                    )
+                    idx += 1
+                if not monitors_payload:
+                    monitors_payload = [
                         {
                             "id": 0,
                             "name": "eDP-1",
-                            "description": "Built-in Display",
+                            "description": "Display",
                             "make": "Unknown",
-                            "model": "Unknown",
+                            "model": "Display",
                             "serial": "",
                             "width": 1920,
                             "height": 1080,
@@ -85,29 +123,42 @@ def cmd_server_worker():
                             "focused": True,
                         }
                     ]
-                )
-            elif "workspaces" in data:
-                resp = json.dumps(
-                    [
-                        {"id": i, "name": str(i), "monitor": "eDP-1", "windows": 1}
-                        for i in range(1, 6)
+                resp = json.dumps(monitors_payload)
+
+            elif "workspaces" in raw:
+                niri_ws = get_niri_json(["workspaces"]) or []
+                ws_payload = []
+                for ws in niri_ws:
+                    ws_payload.append(
+                        {
+                            "id": ws.get("id", 1),
+                            "name": str(ws.get("idx", ws.get("id", 1))),
+                            "monitor": ws.get("output", "eDP-1"),
+                            "windows": 0,
+                        }
+                    )
+                if not ws_payload:
+                    ws_payload = [
+                        {"id": 1, "name": "1", "monitor": "eDP-1", "windows": 0}
                     ]
-                )
-            elif "activewindow" in data:
+                resp = json.dumps(ws_payload)
+
+            elif "activewindow" in raw:
+                win = get_niri_json(["focused-window"]) or {}
                 resp = json.dumps(
                     {
-                        "address": "0x0",
+                        "address": hex(win.get("id", 0)),
                         "mapped": True,
                         "hidden": False,
                         "at": [0, 0],
-                        "size": [1920, 1080],
+                        "size": [0, 0],
                         "workspace": {"id": 1, "name": "1"},
                         "floating": False,
                         "monitor": 0,
-                        "class": "",
-                        "title": "",
-                        "initialClass": "",
-                        "initialTitle": "",
+                        "class": win.get("app_id", ""),
+                        "title": win.get("title", ""),
+                        "initialClass": win.get("app_id", ""),
+                        "initialTitle": win.get("title", ""),
                         "pid": 0,
                         "xwayland": False,
                         "pinned": False,
@@ -115,11 +166,12 @@ def cmd_server_worker():
                         "fullscreenClient": 0,
                     }
                 )
-            elif "dispatch workspace" in data:
-                # Caelestia clicked a workspace button
-                target = data.split()[-1]
+
+            elif "dispatch workspace" in raw:
+                target = raw.split()[-1]
                 subprocess.Popen(["niri", "msg", "action", "focus-workspace", target])
                 resp = "ok"
+
             else:
                 resp = "ok"
 
