@@ -137,7 +137,6 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 resp = json.dumps(ws_payload)
 
             elif "clients" in raw:
-                # Return empty list or basic window array
                 resp = "[]"
 
             elif "activewindow" in raw:
@@ -166,7 +165,17 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
 
             elif "dispatch workspace" in raw:
                 target = raw.split()[-1]
-                subprocess.Popen(["niri", "msg", "action", "focus-workspace", target])
+                # Hyprland scroll actions dispatch e+1, m+1, +1 or e-1, m-1, -1
+                if any(k in target for k in ["+1", "e+", "m+"]):
+                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-down"])
+                elif any(k in target for k in ["-1", "e-", "m-"]):
+                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-up"])
+                else:
+                    # Strip any non-digit chars if present and focus/create
+                    cleaned_idx = "".join(filter(str.isdigit, target)) or target
+                    subprocess.Popen(
+                        ["niri", "msg", "action", "focus-workspace-index", cleaned_idx]
+                    )
                 resp = "ok"
 
             else:
