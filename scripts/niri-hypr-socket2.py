@@ -171,11 +171,30 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 elif any(k in target for k in ["-1", "e-", "m-"]):
                     subprocess.Popen(["niri", "msg", "action", "focus-workspace-up"])
                 else:
-                    # Strip any non-digit chars if present and focus/create
-                    cleaned_idx = "".join(filter(str.isdigit, target)) or target
-                    subprocess.Popen(
-                        ["niri", "msg", "action", "focus-workspace-index", cleaned_idx]
-                    )
+                    cleaned = "".join(filter(str.isdigit, target)) or target
+                    try:
+                        target_idx = int(cleaned)
+                        res = subprocess.run(
+                            [
+                                "niri",
+                                "msg",
+                                "action",
+                                "focus-workspace",
+                                str(target_idx),
+                            ],
+                            capture_output=True,
+                        )
+                        if res.returncode != 0:
+                            ws_list = get_niri_json(["workspaces"]) or []
+                            diff = target_idx - len(ws_list)
+                            for _ in range(max(1, diff)):
+                                subprocess.run(
+                                    ["niri", "msg", "action", "focus-workspace-down"]
+                                )
+                    except ValueError:
+                        subprocess.Popen(
+                            ["niri", "msg", "action", "focus-workspace", target]
+                        )
                 resp = "ok"
 
             else:
