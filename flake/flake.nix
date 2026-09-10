@@ -50,10 +50,10 @@
     };
 
     # Patch caelestia-shell to fall back to the primary screen under Niri
-        caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
-          postInstall =
-            (oldAttrs.postInstall or "")
-            + ''
+    caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
+      postInstall =
+        (oldAttrs.postInstall or "")
+        + ''
               # 1. Fallback for ScreenState active monitor
               substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
                 --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
@@ -85,12 +85,8 @@
                                'readonly property real borderThickness: root.hasFullscreen ? 0 : contentItem.Config.border.thickness * (1 - fsTransitionProg)' \
                 --replace-fail 'anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers' \
                                'anchors.margins: root.hasFullscreen ? 0 : -50 // Make border thicker to smooth out bulge from closed drawers'
-            '';
-        });
-
-
-
-
+        '';
+    });
 
     # Catppuccin Mocha Tokens
     theme = {
