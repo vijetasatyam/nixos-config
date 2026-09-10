@@ -46,41 +46,56 @@
     # 2. Apply it to the Unstable instance
     pkgs-unstable = import nixpkgs-unstable {
       inherit system;
-      config = shared-config; # Centralized here
+      config = shared-config;
     };
 
-    # NEW: Abstract Themes into Variables (Catppuccin Mocha)
+    # Patch caelestia-shell to fall back to the primary screen under Niri
+    caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
+      postInstall =
+        (oldAttrs.postInstall or "")
+        + ''
+              # Fallback for forActive()
+              substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
+                --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
+                --replace-fail '    function componentsForActive(): Components {' \
+                               '    function componentsForActive(): Components {
+              const mon = Hypr.focusedMonitor;
+              for (const c of components.instances)
+                  if (Hypr.monitorFor(c.modelData) === mon)
+                      return c;
+              return components.instances[0] ?? null;
+          }
+          function _unusedComponents(): void {'
+        '';
+    });
+
+    # Catppuccin Mocha Tokens
     theme = {
       name = "catppuccin-mocha";
-      bg = "#1e1e2e"; # Base
-      text = "#cdd6f4"; # Text
-      accent = "#cba6f7"; # Mauve (Primary Accent)
-      border = "#b4befe"; # Lavender
-      surface = "#313244"; # Surface 1
-      active = "#89b4fa"; # Blue
-      urgent = "#f38ba8"; # Red
-      success = "#a6e3a1"; # Green
-      warning = "#f9e2af"; # Yellow
+      bg = "#1e1e2e";
+      text = "#cdd6f4";
+      accent = "#cba6f7";
+      border = "#b4befe";
+      surface = "#313244";
+      active = "#89b4fa";
+      urgent = "#f38ba8";
+      success = "#a6e3a1";
+      warning = "#f9e2af";
     };
   in {
-    # NEW: Multi-Host Setup replacing the single nixosConfigurations.nixos
     nixosConfigurations = {
-      # Host 1: Sage
       sage = nixpkgs.lib.nixosSystem {
         inherit system;
 
-        # Inject 'theme' here for system-level modules
-        specialArgs = {inherit inputs pkgs-unstable theme;};
+        specialArgs = {
+          inherit inputs pkgs-unstable theme;
+          caelestia-pkg = caelestia-shell-patched;
+        };
 
         modules = [
-          # Make sure to rename your 'hosts/nixos' folder to 'hosts/sage'
           ../hosts/sage/configuration.nix
 
-          # 3. Apply it to the Stable instance via a module
-          {nixpkgs.config = shared-config;} # Centralized here
-
-          # Enable the official Mango NixOS module
-          #mango.nixosModules.mango
+          {nixpkgs.config = shared-config;}
 
           home-manager.nixosModules.home-manager
           {
@@ -88,22 +103,17 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "hm-bak";
 
-            # Inject 'theme' here for Home Manager modules
             home-manager.extraSpecialArgs = {
               inherit inputs pkgs-unstable theme;
-              caelestia-shell = inputs.caelestia-shell;
+              caelestia-pkg = caelestia-shell-patched;
             };
 
             home-manager.users.alice = import ../modules/home/home.nix;
           }
         ];
       };
-
-      # Example Host 2: Laptop (For future use)
-      # laptop = nixpkgs.lib.nixosSystem { ... };
     };
 
-    # NEW: Dev Environments (Flake Templates)
     templates = {
       python = {
         path = ../devshells/python;

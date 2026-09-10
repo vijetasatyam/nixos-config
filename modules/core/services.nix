@@ -23,6 +23,10 @@
     services.upower.enable = true;
     services.power-profiles-daemon.enable = true;
 
+    # Enable BlueZ daemon so Quickshell DBus can inspect bluetooth devices
+    hardware.bluetooth.enable = true;
+    services.blueman.enable = true;
+
     # Enable SSH Support
     services.openssh.enable = true;
 
