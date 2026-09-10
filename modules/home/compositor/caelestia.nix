@@ -1,17 +1,16 @@
 {
   pkgs,
   inputs,
-  theme,
   ...
 }: {
   home.packages = with pkgs; [
-    # Quickshell from Flake
-    inputs.quickshell.packages.${pkgs.system}.default
+    # 1. Use the pre-compiled Caelestia package (bundles Caelestia.Config and Qt plugins)
+    inputs.caelestia-shell.packages.${pkgs.system}.default
 
-    # Material You dynamic palette generator
+    # 2. Dynamic Material Design 3 Palette Generator
     matugen
 
-    # Shell dependencies
+    # 3. System integration utilities
     wireplumber
     brightnessctl
     playerctl
@@ -21,16 +20,16 @@
     jq
     libnotify
 
-    # Typography & Icons required by Caelestia
+    # 4. Typography & Icons
     material-symbols
     rubik
     nerd-fonts.jetbrains-mono
   ];
 
-  # Symlink Caelestia upstream QML files into ~/.config/quickshell
+  # Symlink Caelestia's QML code & assets
   xdg.configFile."quickshell".source = inputs.caelestia-shell.outPath;
 
-  # Initialize Matugen palette from your Catppuccin wallpaper
+  # Matugen dynamic theming hook (safe fallback with .png and || true)
   home.activation.matugen = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
     WALLPAPER="/home/alice/Pictures/catppuccin-wallpaper.png"
     if [ -f "$WALLPAPER" ]; then
