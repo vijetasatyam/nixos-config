@@ -60,17 +60,21 @@
 
     // Rules for Caelestia surfaces and dialogs
     window-rule { geometry-corner-radius 16; clip-to-geometry true; }
+    window-rule { match app-id=r#"^caelestia.*"#; open-floating true; }
     window-rule { match app-id=r#"^quickshell.*"#; open-floating true; }
     window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
 
     layer-rule {
-        match namespace="^quickshell.*"
+        match namespace=r#"^caelestia.*"#
+    }
+    layer-rule {
+        match namespace=r#"^quickshell.*"#
     }
 
     // --- Autostart ---
-    spawn-at-startup "quickshell"
+    spawn-at-startup "caelestia-shell"
     spawn-at-startup "bash" "/home/alice/nixos-config/scripts/niri-caelestia-bridge.sh"
-    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.jpg" "-m" "fill"
+    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.png" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 
     // --- Keybindings ---
@@ -80,8 +84,8 @@
         Mod+Q      { close-window; }
 
         // Caelestia Shell Drawers
-        Mod+Space { spawn "quickshell" "ipc" "call" "launcher" "toggle"; }
-        Mod+N     { spawn "quickshell" "ipc" "call" "controlCenter" "toggle"; }
+        Mod+Space { spawn "caelestia-shell" "ipc" "call" "launcher" "toggle"; }
+        Mod+N     { spawn "caelestia-shell" "ipc" "call" "controlCenter" "toggle"; }
 
         // Horizontal Column & Window Switching
         Mod+Tab       { focus-column-right; }
@@ -111,7 +115,6 @@
 
   # Theme and Style Fuzzel dynamically using Catppuccin / Material 3 Tokens
   xdg.configFile."fuzzel/fuzzel.ini".text = let
-    # Helper to convert "#RRGGBB" -> "RRGGBBAA"
     toRgba = hex: alpha: (builtins.substring 1 (builtins.stringLength hex - 1) hex) + alpha;
   in ''
     [main]
@@ -135,7 +138,6 @@
     icon-theme=Papirus-Dark
 
     [colors]
-    # Format: RRGGBBAA
     background=${toRgba theme.bg "f2"}
     text=${toRgba theme.text "ff"}
     prompt=${toRgba theme.accent "ff"}
@@ -143,12 +145,10 @@
     input=${toRgba theme.text "ff"}
     match=${toRgba theme.active "ff"}
 
-    # Selected Item Styling (Floating Pill)
     selection=${toRgba theme.surface "e6"}
     selection-text=${toRgba theme.accent "ff"}
     selection-match=${toRgba theme.urgent "ff"}
 
-    # Border & Counter
     border=${toRgba theme.border "ff"}
     counter=${toRgba theme.surface "ff"}
 
