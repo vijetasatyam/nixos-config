@@ -12,6 +12,9 @@
       enable = true;
       package = pkgs-unstable.neovim-unwrapped; # Use Unstable for latest features
 
+      withRuby = true;
+      withPython3 = true;
+
       defaultEditor = true;
       viAlias = true;
       vimAlias = true;

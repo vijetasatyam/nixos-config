@@ -2,8 +2,7 @@
   # config,
   # pkgs,
   ...
-}:
-{
+}: {
   # --- 1. Nix Settings ---
   nix.settings = {
     experimental-features = [
@@ -22,7 +21,6 @@
     dates = "weekly";
     options = "--delete-older-than 7d";
   };
-
 
   # THE FIX: The Python overlays for kubernetes/aiohappyeyeballs have been removed.
   # This stops the "butterfly effect" that forced QEMU and Libvirt to compile from source.

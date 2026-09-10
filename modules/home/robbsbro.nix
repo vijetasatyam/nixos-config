@@ -9,7 +9,7 @@
     pywal # Generates live color palettes
     cava # Audio visualizer used in their Quickshell music panel
     kitty # Their terminal of choice
-    swww # Or keep swaybg if you prefer
+    awww # Or keep swaybg if you prefer
     pamixer
     playerctl
     brightnessctl
