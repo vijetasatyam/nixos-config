@@ -32,8 +32,9 @@
 
   # Initialize Matugen palette from your Catppuccin wallpaper
   home.activation.matugen = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
-    if [ -f "/home/alice/Pictures/catppuccin-wallpaper.png" ]; then
-      ${pkgs.matugen}/bin/matugen image /home/alice/Pictures/catppuccin-wallpaper.jpg -m dark
+    WALLPAPER="/home/alice/Pictures/catppuccin-wallpaper.png"
+    if [ -f "$WALLPAPER" ]; then
+      ${pkgs.matugen}/bin/matugen image "$WALLPAPER" -m dark || true
     fi
   '';
 }
