@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import json
 import os
-import select
 import socket
 import subprocess
-import sys
 import threading
 
 SIGNATURE = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "niri-fake-hypr")
