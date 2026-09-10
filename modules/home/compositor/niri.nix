@@ -136,6 +136,10 @@
 
         Mod+Shift+Q { quit; }
         Print { spawn "sh" "-c" "grim -g \"$(slurp)\" - | wl-copy"; }
+
+        // Instead of fullscreen-window, maximize width & height within the viewport
+            Mod+F { maximize-column; }
+            Mod+Shift+F { fullscreen-window; }
     }
   '';
 
