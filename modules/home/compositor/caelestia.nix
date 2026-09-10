@@ -20,6 +20,7 @@
     socat
     jq
     libnotify
+    python3
 
     # 4. Typography & Icons
     material-symbols
