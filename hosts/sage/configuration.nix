@@ -30,6 +30,7 @@
     ../../modules/dev/dev-tools.nix
     ../../modules/dev/virtual-machines.nix
     # ../../modules/dev/winboat.nix
+    ../../modules/anything_temp/usb.nix
   ];
 
   # # Enable VMware Guest modules if needed
