@@ -51,9 +51,9 @@
 
     # Patch caelestia-shell to fall back to the primary screen under Niri
     caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
-      postInstall =
-        (oldAttrs.postInstall or "")
-        + ''
+          postInstall =
+            (oldAttrs.postInstall or "")
+            + ''
               # 1. Fallback for ScreenState active monitor
               substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
                 --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
@@ -78,8 +78,19 @@
                 --replace-fail '    y: clampedThickness + win.dragMaskPadding' '    y: 0' \
                 --replace-fail '    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2' '    width: win.width - bar.clampedWidth' \
                 --replace-fail '    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2' '    height: win.height'
-        '';
-    });
+
+              # 4. Dynamically collapse outer border and negative margins on fullscreen
+              substituteInPlace $out/share/caelestia-shell/modules/drawers/ContentWindow.qml \
+                --replace-fail 'anchors.margins: -50' 'anchors.margins: root.hasFullscreen ? 0 : -50' \
+                --replace-fail 'borderThickness: root.contentItem.Config.border.thickness' 'borderThickness: root.hasFullscreen ? 0 : root.contentItem.Config.border.thickness' \
+                --replace-fail 'clampedThickness: root.contentItem.Config.border.clampedThickness' 'clampedThickness: root.hasFullscreen ? 0 : root.contentItem.Config.border.clampedThickness'
+            '';
+        });
+
+
+
+
+
     # Catppuccin Mocha Tokens
     theme = {
       name = "catppuccin-mocha";
