@@ -79,13 +79,14 @@
                 --replace-fail '    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2' '    width: win.width - bar.clampedWidth' \
                 --replace-fail '    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2' '    height: win.height'
 
-              # 4. Zero left border and handle fullscreen margins
+              # 4. Remove fake -50 margins and collapse outer border when fullscreen
               substituteInPlace $out/share/caelestia-shell/modules/drawers/ContentWindow.qml \
-                --replace-fail 'borderLeft: bar.implicitWidth - anchors.margins - root.sdfBorderOffset' 'borderLeft: 0' \
                 --replace-fail 'readonly property real borderThickness: contentItem.Config.border.thickness * (1 - fsTransitionProg)' \
                                'readonly property real borderThickness: root.hasFullscreen ? 0 : contentItem.Config.border.thickness * (1 - fsTransitionProg)' \
                 --replace-fail 'anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers' \
-                               'anchors.margins: root.hasFullscreen ? 0 : -50 // Make border thicker to smooth out bulge from closed drawers'
+                               'anchors.margins: 0' \
+                --replace-fail 'borderLeft: bar.implicitWidth - anchors.margins - root.sdfBorderOffset' \
+                               'borderLeft: root.hasFullscreen ? 0 : (bar.implicitWidth - root.sdfBorderOffset)'
 
               # 5. Prevent TypeError on specialWorkspace.name during scroll in Bar.qml
               substituteInPlace $out/share/caelestia-shell/modules/bar/Bar.qml \
