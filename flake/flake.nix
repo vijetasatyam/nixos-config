@@ -51,9 +51,9 @@
 
     # Patch caelestia-shell to fall back to the primary screen under Niri
     caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
-      postInstall =
-        (oldAttrs.postInstall or "")
-        + ''
+          postInstall =
+            (oldAttrs.postInstall or "")
+            + ''
               # 1. Fallback for ScreenState active monitor
               substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
                 --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
@@ -79,15 +79,20 @@
                 --replace-fail '    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2' '    width: win.width - bar.clampedWidth' \
                 --replace-fail '    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2' '    height: win.height'
 
-              # 4. Zero out the decorative left border frame and remove fullscreen margin bulges
+              # 4. Zero left border and handle fullscreen margins
               substituteInPlace $out/share/caelestia-shell/modules/drawers/ContentWindow.qml \
                 --replace-fail 'borderLeft: bar.implicitWidth - anchors.margins - root.sdfBorderOffset' 'borderLeft: 0' \
                 --replace-fail 'readonly property real borderThickness: contentItem.Config.border.thickness * (1 - fsTransitionProg)' \
                                'readonly property real borderThickness: root.hasFullscreen ? 0 : contentItem.Config.border.thickness * (1 - fsTransitionProg)' \
                 --replace-fail 'anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers' \
                                'anchors.margins: root.hasFullscreen ? 0 : -50 // Make border thicker to smooth out bulge from closed drawers'
-        '';
-    });
+
+              # 5. Prevent TypeError on specialWorkspace.name during scroll in Bar.qml
+              substituteInPlace $out/share/caelestia-shell/modules/bar/Bar.qml \
+                --replace-fail 'const specialWs = mon?.lastIpcObject.specialWorkspace.name;' \
+                               'const specialWs = mon?.lastIpcObject?.specialWorkspace?.name ?? "";'
+            '';
+        });
 
     # Catppuccin Mocha Tokens
     theme = {
