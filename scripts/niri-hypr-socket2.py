@@ -8,12 +8,39 @@ import subprocess
 import threading
 
 SIGNATURE = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "niri-fake-hypr")
-SOCKET_DIR = f"/tmp/hypr/{SIGNATURE}"
-EVENT_SOCK = f"{SOCKET_DIR}/.socket2.sock"
-CMD_SOCK = f"{SOCKET_DIR}/.socket.sock"
+XDG_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+
+# Setup multiple target directories for maximum compatibility with Quickshell
+TARGET_DIRS = [
+    f"/tmp/hypr/{SIGNATURE}",
+    f"{XDG_RUNTIME_DIR}/hypr/{SIGNATURE}",
+    f"/tmp/hypr",
+    f"{XDG_RUNTIME_DIR}/hypr",
+]
+
+EVENT_SOCK = f"/tmp/hypr/{SIGNATURE}/.socket2.sock"
+CMD_SOCK = f"/tmp/hypr/{SIGNATURE}/.socket.sock"
 
 clients = set()
 clients_lock = threading.Lock()
+
+
+def sync_socket_links():
+    """Ensure sockets are mirrored across all locations Quickshell might check."""
+    for d in TARGET_DIRS:
+        os.makedirs(d, exist_ok=True)
+
+    for sock in [".socket.sock", ".socket2.sock"]:
+        src = f"/tmp/hypr/{SIGNATURE}/{sock}"
+        for d in TARGET_DIRS:
+            dst = f"{d}/{sock}"
+            if dst != src:
+                try:
+                    if os.path.exists(dst) or os.path.islink(dst):
+                        os.unlink(dst)
+                    os.symlink(src, dst)
+                except OSError:
+                    pass
 
 
 def get_niri_json(subcommand: list):
@@ -70,6 +97,8 @@ def event_server_worker():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(EVENT_SOCK)
     server.listen(16)
+
+    sync_socket_links()
 
     while True:
         try:
@@ -192,15 +221,15 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
             elif "dispatch workspace" in raw:
                 target = raw.split()[-1].strip()
 
-                # Up-scroll / previous workspace
+                # Up-scroll (Caelestia dispatches "workspace r-1")
                 if any(x in target for x in ["r-1", "e-1", "m-1", "-", "prev"]):
                     subprocess.run(["niri", "msg", "action", "focus-workspace-up"])
 
-                # Down-scroll / next workspace
+                # Down-scroll (Caelestia dispatches "workspace r+1")
                 elif any(x in target for x in ["r+1", "e+1", "m+1", "+", "next"]):
                     subprocess.run(["niri", "msg", "action", "focus-workspace-down"])
 
-                # Direct numeric workspace
+                # Numerical jump
                 else:
                     digits = re.findall(r"\d+", target)
                     if digits:
@@ -235,6 +264,7 @@ class ThreadedUnixStreamServer(
 
 
 def cmd_server_worker():
+    os.makedirs(f"/tmp/hypr/{SIGNATURE}", exist_ok=True)
     if os.path.exists(CMD_SOCK):
         try:
             os.unlink(CMD_SOCK)
@@ -242,6 +272,7 @@ def cmd_server_worker():
             pass
 
     server = ThreadedUnixStreamServer(CMD_SOCK, HyprCmdHandler)
+    sync_socket_links()
     server.serve_forever()
 
 
@@ -290,7 +321,7 @@ def niri_event_worker():
 
 
 def main():
-    os.makedirs(SOCKET_DIR, exist_ok=True)
+    sync_socket_links()
     threading.Thread(target=event_server_worker, daemon=True).start()
     threading.Thread(target=cmd_server_worker, daemon=True).start()
     niri_event_worker()
