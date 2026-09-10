@@ -19,6 +19,10 @@
     services.dbus.enable = true;
     services.gnome.gnome-keyring.enable = true;
 
+    # Enable UPower for battery/power reporting
+    services.upower.enable = true;
+    services.power-profiles-daemon.enable = true;
+
     # Enable SSH Support
     services.openssh.enable = true;
 

@@ -32,8 +32,10 @@
   # Matugen dynamic theming hook (safe fallback with .png and || true)
   home.activation.matugen = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
     WALLPAPER="/home/alice/Pictures/catppuccin-wallpaper.png"
+    SCHEME_DIR="/home/alice/.local/state/caelestia"
     if [ -f "$WALLPAPER" ]; then
-      ${pkgs.matugen}/bin/matugen image "$WALLPAPER" -m dark || true
+      mkdir -p "$SCHEME_DIR"
+      ${pkgs.matugen}/bin/matugen image "$WALLPAPER" --json hex > "$SCHEME_DIR/scheme.json" 2>/dev/null || true
     fi
   '';
 }
