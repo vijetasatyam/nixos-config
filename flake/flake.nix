@@ -51,9 +51,9 @@
 
     # Patch caelestia-shell to fall back to the primary screen under Niri
     caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
-          postInstall =
-            (oldAttrs.postInstall or "")
-            + ''
+      postInstall =
+        (oldAttrs.postInstall or "")
+        + ''
               # 1. Fallback for ScreenState active monitor
               substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
                 --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
@@ -91,8 +91,8 @@
               substituteInPlace $out/share/caelestia-shell/modules/bar/Bar.qml \
                 --replace-fail 'const specialWs = mon?.lastIpcObject.specialWorkspace.name;' \
                                'const specialWs = mon?.lastIpcObject?.specialWorkspace?.name ?? "";'
-            '';
-        });
+        '';
+    });
 
     # Catppuccin Mocha Tokens
     theme = {
