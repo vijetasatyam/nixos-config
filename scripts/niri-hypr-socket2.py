@@ -71,6 +71,9 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
 
             if "monitors" in raw:
                 outputs = get_niri_json(["outputs"]) or {}
+                focused_win = get_niri_json(["focused-window"]) or {}
+                is_fullscreen = bool(focused_win.get("is_fullscreen", False))
+
                 monitors_payload = []
                 idx = 0
                 for name, out in outputs.items():
@@ -89,7 +92,11 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             / 1000.0,
                             "x": out.get("logical", {}).get("x", 0),
                             "y": out.get("logical", {}).get("y", 0),
-                            "activeWorkspace": {"id": 1, "name": "1"},
+                            "activeWorkspace": {
+                                "id": 1,
+                                "name": "1",
+                                "hasfullscreen": is_fullscreen,
+                            },
                             "specialWorkspace": {"id": 0, "name": ""},
                             "focused": True,
                         }
@@ -109,7 +116,11 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             "refreshRate": 60.0,
                             "x": 0,
                             "y": 0,
-                            "activeWorkspace": {"id": 1, "name": "1"},
+                            "activeWorkspace": {
+                                "id": 1,
+                                "name": "1",
+                                "hasfullscreen": is_fullscreen,
+                            },
                             "specialWorkspace": {"id": 0, "name": ""},
                             "focused": True,
                         }
@@ -128,6 +139,12 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             "name": str(idx_val),
                             "monitor": ws.get("output", "eDP-1"),
                             "windows": 0,
+                            "hasfullscreen": ws.get("is_active", False)
+                            and bool(
+                                (get_niri_json(["focused-window"]) or {}).get(
+                                    "is_fullscreen", False
+                                )
+                            ),
                         }
                     )
                 if not ws_payload:
@@ -141,6 +158,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
 
             elif "activewindow" in raw:
                 win = get_niri_json(["focused-window"]) or {}
+                fs = 2 if win.get("is_fullscreen", False) else 0
                 resp = json.dumps(
                     {
                         "address": hex(win.get("id", 0)),
@@ -158,22 +176,22 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                         "pid": 0,
                         "xwayland": False,
                         "pinned": False,
-                        "fullscreen": 0,
-                        "fullscreenClient": 0,
+                        "fullscreen": fs,
+                        "fullscreenClient": fs,
                     }
                 )
 
             elif "dispatch workspace" in raw:
                 target = raw.split()[-1]
-                # Hyprland scroll actions dispatch e+1, m+1, +1 or e-1, m-1, -1
-                if any(k in target for k in ["+1", "e+", "m+"]):
-                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-down"])
-                elif any(k in target for k in ["-1", "e-", "m-"]):
+                # Robust relative matching for scroll-up and scroll-down
+                if "-" in target or "prev" in target:
                     subprocess.Popen(["niri", "msg", "action", "focus-workspace-up"])
+                elif "+" in target or "next" in target:
+                    subprocess.Popen(["niri", "msg", "action", "focus-workspace-down"])
                 else:
-                    cleaned = "".join(filter(str.isdigit, target)) or target
-                    try:
-                        target_idx = int(cleaned)
+                    digits = "".join(filter(str.isdigit, target))
+                    if digits:
+                        target_idx = int(digits)
                         res = subprocess.run(
                             [
                                 "niri",
@@ -191,10 +209,6 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                                 subprocess.run(
                                     ["niri", "msg", "action", "focus-workspace-down"]
                                 )
-                    except ValueError:
-                        subprocess.Popen(
-                            ["niri", "msg", "action", "focus-workspace", target]
-                        )
                 resp = "ok"
 
             else:
