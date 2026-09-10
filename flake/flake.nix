@@ -51,23 +51,26 @@
 
     # Patch caelestia-shell to fall back to the primary screen under Niri
     caelestia-shell-patched = caelestia-shell.packages.${system}.default.overrideAttrs (oldAttrs: {
-      postInstall =
-        (oldAttrs.postInstall or "")
-        + ''
-              # Fallback for forActive()
-              substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
-                --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
-                --replace-fail '    function componentsForActive(): Components {' \
-                               '    function componentsForActive(): Components {
-              const mon = Hypr.focusedMonitor;
-              for (const c of components.instances)
-                  if (Hypr.monitorFor(c.modelData) === mon)
-                      return c;
-              return components.instances[0] ?? null;
-          }
-          function _unusedComponents(): void {'
-        '';
-    });
+          postInstall = (oldAttrs.postInstall or "") + ''
+            # 1. Fallback for ScreenState active monitor
+            substituteInPlace $out/share/caelestia-shell/services/ShellState.qml \
+              --replace-fail '        return null;' '        return states.instances[0] ?? null;' \
+              --replace-fail '    function componentsForActive(): Components {' \
+                             '    function componentsForActive(): Components {
+            const mon = Hypr.focusedMonitor;
+            for (const c of components.instances)
+                if (Hypr.monitorFor(c.modelData) === mon)
+                    return c;
+            return components.instances[0] ?? null;
+        }
+        function _unusedComponents(): void {'
+
+            # 2. Disable border exclusion zones (removes 50-100px mouse-blocking perimeter)
+            substituteInPlace $out/share/caelestia-shell/modules/drawers/Drawers.qml \
+              --replace-fail '        Exclusions {' '        /* Exclusions {' \
+              --replace-fail '        ContentWindow {' '        */ ContentWindow {'
+          '';
+        });
 
     # Catppuccin Mocha Tokens
     theme = {
