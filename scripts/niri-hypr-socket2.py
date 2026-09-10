@@ -2,6 +2,7 @@
 import json
 import os
 import socket
+import socketserver
 import subprocess
 import threading
 
@@ -39,6 +40,7 @@ def broadcast(msg: str):
         clients.difference_update(to_remove)
 
 
+# --- Event Broadcaster (.socket2.sock) ---
 def event_server_worker():
     if os.path.exists(EVENT_SOCK):
         try:
@@ -59,42 +61,31 @@ def event_server_worker():
             break
 
 
-def cmd_server_worker():
-    if os.path.exists(CMD_SOCK):
+# --- Command & Query Handler (.socket.sock) ---
+class HyprCmdHandler(socketserver.BaseRequestHandler):
+    def handle(self):
         try:
-            os.unlink(CMD_SOCK)
-        except OSError:
-            pass
-
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(CMD_SOCK)
-    server.listen(16)
-
-    while True:
-        try:
-            conn, _ = server.accept()
-            raw = conn.recv(1024).decode("utf-8", errors="ignore").strip()
+            raw = self.request.recv(4096).decode("utf-8", errors="ignore").strip()
+            if not raw:
+                return
 
             if "monitors" in raw:
                 outputs = get_niri_json(["outputs"]) or {}
                 monitors_payload = []
                 idx = 0
                 for name, out in outputs.items():
+                    mode = out.get("current_mode") or {}
                     monitors_payload.append(
                         {
                             "id": idx,
                             "name": name,
-                            "description": out.get("make", "")
-                            + " "
-                            + out.get("model", ""),
+                            "description": f"{out.get('make', '')} {out.get('model', '')}".strip(),
                             "make": out.get("make", "Unknown"),
                             "model": out.get("model", "Display"),
                             "serial": "",
-                            "width": out.get("current_mode", {}).get("width", 1920),
-                            "height": out.get("current_mode", {}).get("height", 1080),
-                            "refreshRate": float(
-                                out.get("current_mode", {}).get("refresh_rate", 60000)
-                            )
+                            "width": mode.get("width", 1920),
+                            "height": mode.get("height", 1080),
+                            "refreshRate": float(mode.get("refresh_rate", 60000))
                             / 1000.0,
                             "x": out.get("logical", {}).get("x", 0),
                             "y": out.get("logical", {}).get("y", 0),
@@ -129,10 +120,12 @@ def cmd_server_worker():
                 niri_ws = get_niri_json(["workspaces"]) or []
                 ws_payload = []
                 for ws in niri_ws:
+                    ws_id = ws.get("id", 1)
+                    idx_val = ws.get("idx", ws_id)
                     ws_payload.append(
                         {
-                            "id": ws.get("id", 1),
-                            "name": str(ws.get("idx", ws.get("id", 1))),
+                            "id": ws_id,
+                            "name": str(idx_val),
                             "monitor": ws.get("output", "eDP-1"),
                             "windows": 0,
                         }
@@ -142,6 +135,10 @@ def cmd_server_worker():
                         {"id": 1, "name": "1", "monitor": "eDP-1", "windows": 0}
                     ]
                 resp = json.dumps(ws_payload)
+
+            elif "clients" in raw:
+                # Return empty list or basic window array
+                resp = "[]"
 
             elif "activewindow" in raw:
                 win = get_niri_json(["focused-window"]) or {}
@@ -175,12 +172,29 @@ def cmd_server_worker():
             else:
                 resp = "ok"
 
-            conn.sendall(resp.encode("utf-8"))
-            conn.close()
+            self.request.sendall(resp.encode("utf-8"))
         except Exception:
-            break
+            pass
 
 
+class ThreadedUnixStreamServer(
+    socketserver.ThreadingMixIn, socketserver.UnixStreamServer
+):
+    daemon_threads = True
+
+
+def cmd_server_worker():
+    if os.path.exists(CMD_SOCK):
+        try:
+            os.unlink(CMD_SOCK)
+        except OSError:
+            pass
+
+    server = ThreadedUnixStreamServer(CMD_SOCK, HyprCmdHandler)
+    server.serve_forever()
+
+
+# --- Niri Event Stream Listener ---
 def niri_event_worker():
     cmd = ["niri", "msg", "-j", "event-stream"]
     proc = subprocess.Popen(
