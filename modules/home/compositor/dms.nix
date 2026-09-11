@@ -24,21 +24,23 @@
       fi
     fi
 
+    # Fast-kill any running instances without waiting for timeout
+    kill_existing() {
+      pkill -9 -f "quickshell" 2>/dev/null || true
+      pkill -9 -f "inir" 2>/dev/null || true
+      systemctl --user stop --no-block inir.service 2>/dev/null || true
+      sleep 0.05
+    }
+
     case "$TARGET" in
       dms)
-        echo "Switching to DankMaterialShell (DMS)..."
-        systemctl --user stop inir.service 2>/dev/null || true
-        pkill -f inir 2>/dev/null || true
-        pkill -f quickshell 2>/dev/null || true
-        sleep 0.2
-        ${dmsPackage}/bin/dms >/dev/null 2>&1 &
+        kill_existing
+        nohup ${dmsPackage}/bin/dms >/dev/null 2>&1 &
         echo "dms" > "$STATE_FILE"
         ;;
       inir)
-        echo "Switching to iNiR..."
-        pkill -f quickshell 2>/dev/null || true
-        sleep 0.2
-        systemctl --user restart inir.service 2>/dev/null || inir >/dev/null 2>&1 &
+        kill_existing
+        nohup inir >/dev/null 2>&1 &
         echo "inir" > "$STATE_FILE"
         ;;
       *)
@@ -53,18 +55,19 @@ in {
     toggleShellScript
   ];
 
-  # Default initial startup on login: starts iNiR cleanly
+  # Default initial startup on login
   systemd.user.services.inir-autostart = {
     Unit = {
       Description = "Auto-start default shell on Niri";
-      After = ["niri.service"];
+      After = [ "niri.service" ];
     };
     Install = {
-      WantedBy = ["niri.service"];
+      WantedBy = [ "niri.service" ];
     };
     Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
       ExecStart = "${toggleShellScript}/bin/toggle-shell inir";
-      Restart = "on-failure";
     };
   };
 }
