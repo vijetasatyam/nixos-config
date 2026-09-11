@@ -37,6 +37,7 @@
       dms)
         kill_existing
         echo "dms" > "$STATE_FILE"
+        export DMS_SOCKET="''${DMS_SOCKET:-''${XDG_RUNTIME_DIR:-/run/user/$UID}/dms.sock}"
         nohup dms > /tmp/dms.log 2>&1 &
         ;;
       inir)
