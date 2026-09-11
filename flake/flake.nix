@@ -30,7 +30,7 @@
     # 6. DankMaterialShell (DMS)
     dms = {
       url = "github:Aylur/dms";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      flake = false;
     };
   };
 
