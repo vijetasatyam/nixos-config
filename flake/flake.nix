@@ -21,15 +21,15 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    # 5. iNiR Shell (Native Niri Material Shell)
+    # 5. iNiR (Native Niri Material Shell)
     inir = {
       url = "github:snowarch/inir";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    # 6. DankMaterialShell
+    # 6. DankMaterialShell (DMS)
     dms = {
-      url = "github:Aven1us/dank-material-shell";
+      url = "github:Aylur/dms";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
   };
@@ -55,6 +55,7 @@
       config = shared-config;
     };
 
+    # Catppuccin Mocha Tokens
     theme = {
       name = "catppuccin-mocha";
       bg = "#1e1e2e";
@@ -81,8 +82,10 @@
 
           {nixpkgs.config = shared-config;}
 
-          # Include iNiR's NixOS module
-          inir.nixosModules.inir
+          # System-level Niri enablement
+          {
+            programs.niri.enable = true;
+          }
 
           home-manager.nixosModules.home-manager
           {
