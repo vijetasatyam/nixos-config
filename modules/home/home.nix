@@ -14,9 +14,8 @@
     ./dev/git-config.nix
     ./dev/terminal.nix
     ./compositor/niri.nix
-    # ./compositor/waybar.nix
-    # ./compositor/swaync.nix
-    # ./compositor/quickshell.nix
+    ./compositor/inir.nix
+    ./compositor/dms.nix
   ];
 
   # General User Packages
