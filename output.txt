@@ -1,4 +1,5 @@
 ==> ./flake/flake.nix <==
+#/home/alice/nixos-config/flake/flake.nix
 {
   description = "Alice's Modular Hybrid Config";
 
@@ -21,9 +22,15 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    # 5. Caelestia Shell
-    caelestia-shell = {
-      url = "github:caelestia-dots/shell";
+    # 5. iNiR (Native Niri Material Shell)
+    inir = {
+      url = "github:snowarch/inir";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    # 6. DankMaterialShell (DMS)
+    dms = {
+      url = "github:Aylur/dms";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
   };
@@ -34,76 +41,69 @@
     nixpkgs-unstable,
     home-manager,
     quickshell,
-    caelestia-shell,
+    inir,
+    dms,
     ...
   } @ inputs: let
     system = "x86_64-linux";
 
-    # 1. Define a shared config block
     shared-config = {
       allowUnfree = true;
     };
 
-    # 2. Apply it to the Unstable instance
     pkgs-unstable = import nixpkgs-unstable {
       inherit system;
-      config = shared-config; # Centralized here
+      config = shared-config;
     };
 
-    # NEW: Abstract Themes into Variables (Catppuccin Mocha)
+    # Catppuccin Mocha Tokens
     theme = {
       name = "catppuccin-mocha";
-      bg = "#1e1e2e"; # Base
-      text = "#cdd6f4"; # Text
-      accent = "#cba6f7"; # Mauve (Primary Accent)
-      border = "#b4befe"; # Lavender
-      surface = "#313244"; # Surface 1
-      active = "#89b4fa"; # Blue
-      urgent = "#f38ba8"; # Red
-      success = "#a6e3a1"; # Green
-      warning = "#f9e2af"; # Yellow
+      bg = "#1e1e2e";
+      text = "#cdd6f4";
+      accent = "#cba6f7";
+      border = "#b4befe";
+      surface = "#313244";
+      active = "#89b4fa";
+      urgent = "#f38ba8";
+      success = "#a6e3a1";
+      warning = "#f9e2af";
     };
   in {
-    # NEW: Multi-Host Setup replacing the single nixosConfigurations.nixos
     nixosConfigurations = {
-      # Host 1: Sage
       sage = nixpkgs.lib.nixosSystem {
         inherit system;
 
-        # Inject 'theme' here for system-level modules
-        specialArgs = {inherit inputs pkgs-unstable theme;};
+        specialArgs = {
+          inherit inputs pkgs-unstable theme;
+        };
 
         modules = [
-          # Make sure to rename your 'hosts/nixos' folder to 'hosts/sage'
           ../hosts/sage/configuration.nix
 
-          # 3. Apply it to the Stable instance via a module
-          {nixpkgs.config = shared-config;} # Centralized here
+          {nixpkgs.config = shared-config;}
 
-          # Enable the official Mango NixOS module
-          #mango.nixosModules.mango
+          # System-level Niri enablement
+          {
+            programs.niri.enable = true;
+          }
 
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "hm-bak";
 
-            # Inject 'theme' here for Home Manager modules
             home-manager.extraSpecialArgs = {
               inherit inputs pkgs-unstable theme;
-              caelestia-shell = inputs.caelestia-shell;
             };
 
             home-manager.users.alice = import ../modules/home/home.nix;
           }
         ];
       };
-
-      # Example Host 2: Laptop (For future use)
-      # laptop = nixpkgs.lib.nixosSystem { ... };
     };
 
-    # NEW: Dev Environments (Flake Templates)
     templates = {
       python = {
         path = ../devshells/python;
@@ -122,6 +122,7 @@
 }
 
 ==> ./modules/home/home.nix <==
+#/home/alice/nixos-config/modules/home/home.nix
 {
   #config,
   pkgs,
@@ -137,11 +138,9 @@
     ./dev/git-config.nix
     ./dev/terminal.nix
     ./compositor/niri.nix
-    ./compositor/caelestia.nix
     # ./compositor/waybar.nix
     # ./compositor/swaync.nix
     # ./compositor/quickshell.nix
-    # ./robbsbro.nix
   ];
 
   # General User Packages
@@ -164,40 +163,8 @@
   programs.home-manager.enable = true;
 }
 
-==> ./modules/home/robbsbro.nix <==
-{
-  pkgs,
-  inputs,
-  ...
-}: {
-  # 1. Install Robbsbro69's specific dependencies
-  home.packages = with pkgs; [
-    inputs.quickshell.packages.${pkgs.system}.default
-    pywal # Generates live color palettes
-    cava # Audio visualizer used in their Quickshell music panel
-    kitty # Their terminal of choice
-    awww # Or keep swaybg if you prefer
-    pamixer
-    playerctl
-    brightnessctl
-  ];
-
-  # 2. Map their dotfiles into your ~/.config directory
-  # This tricks their Quickshell setup into thinking it's running natively
-  xdg.configFile = {
-    "quickshell".source = ./robbs-dots/quickshell;
-    "cava".source = ./robbs-dots/cava;
-    "kitty".source = ./robbs-dots/kitty;
-  };
-
-  # 3. Pywal initial setup script (runs on login)
-  home.activation.pywal = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
-    # Generate a default colorscheme so Quickshell doesn't crash on first boot
-    ${pkgs.pywal}/bin/wal -i /home/alice/Pictures/catppuccin-wallpaper.jpg -n -q
-  '';
-}
-
 ==> ./modules/home/dev/terminal.nix <==
+#/home/alice/nixos-config/modules/home/dev/terminal.nix
 {
   pkgs,
   pkgs-unstable,
@@ -255,7 +222,11 @@
 }
 
 ==> ./modules/home/dev/bash.nix <==
-{pkgs, ...}: {
+#/home/alice/nixos-config/modules/home/dev/bash.nix
+{
+  pkgs,
+  ...
+}: {
   programs.bash = {
     enable = true;
     enableCompletion = true;
@@ -294,6 +265,7 @@
 }
 
 ==> ./modules/home/dev/neovim.nix <==
+#/home/alice/nixos-config/modules/home/dev/neovim.nix
 {
   config,
   pkgs,
@@ -417,7 +389,11 @@
 }
 
 ==> ./modules/home/dev/starship.nix <==
-{lib, ...}: {
+#/home/alice/nixos-config/modules/home/dev/starship.nix
+{
+  lib,
+  ...
+}: {
   programs.starship = {
     enable = true;
 
@@ -491,7 +467,11 @@
 }
 
 ==> ./modules/home/dev/git-config.nix <==
-{pkgs, ...}: {
+#/home/alice/nixos-config/modules/home/dev/git-config.nix
+{
+  pkgs,
+  ...
+}: {
   home.packages = with pkgs; [
     git
     gnupg
@@ -534,6 +514,7 @@
 }
 
 ==> ./modules/home/dev/development-tools.nix <==
+#/home/alice/nixos-config/modules/home/dev/development-tools.nix
 {
   config,
   pkgs,
@@ -585,6 +566,7 @@
 }
 
 ==> ./modules/home/dev/vscode.nix <==
+#/home/alice/nixos-config/modules/home/dev/vscode.nix
 {
   config,
   pkgs,
@@ -661,6 +643,7 @@ in {
 }
 
 ==> ./modules/home/dev/vscodium.nix <==
+#/home/alice/nixos-config/modules/home/dev/vscodium.nix
 {
   config,
   pkgs,
@@ -754,6 +737,7 @@ in {
 }
 
 ==> ./modules/home/dev/zsh.nix <==
+#/home/alice/nixos-config/modules/home/dev/zsh.nix
 {
   # config,
   pkgs,
@@ -808,48 +792,8 @@ in {
   };
 }
 
-==> ./modules/home/compositor/caelestia.nix <==
-{
-  pkgs,
-  inputs,
-  theme,
-  ...
-}: {
-  home.packages = with pkgs; [
-    # Quickshell from Flake
-    inputs.quickshell.packages.${pkgs.system}.default
-
-    # Material You dynamic palette generator
-    matugen
-
-    # Shell dependencies
-    wireplumber
-    brightnessctl
-    playerctl
-    networkmanager
-    bluez
-    socat
-    jq
-    libnotify
-
-    # Typography & Icons required by Caelestia
-    material-symbols
-    rubik
-    nerd-fonts.jetbrains-mono
-  ];
-
-  # Symlink Caelestia upstream QML files into ~/.config/quickshell
-  xdg.configFile."quickshell".source = inputs.caelestia-shell.outPath;
-
-  # Initialize Matugen palette from your Catppuccin wallpaper
-  home.activation.matugen = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
-    if [ -f "/home/alice/Pictures/catppuccin-wallpaper.jpg" ]; then
-      ${pkgs.matugen}/bin/matugen image /home/alice/Pictures/catppuccin-wallpaper.jpg -m dark
-    fi
-  '';
-}
-
 ==> ./modules/home/compositor/quickshell.nix <==
+#/home/alice/nixos-config/modules/home/compositor/quickshell.nix
 {
   pkgs,
   inputs,
@@ -963,7 +907,80 @@ in {
   '';
 }
 
+==> ./modules/home/compositor/dms.nix <==
+#/home/alice/nixos-config/modules/home/compositor/dms.nix
+{
+  pkgs,
+  inputs,
+  ...
+}: let
+  dmsPackage = pkgs.writeShellScriptBin "dms" ''
+    exec ${inputs.quickshell.packages.${pkgs.system}.default}/bin/quickshell -p ${inputs.dms} "$@"
+  '';
+
+  toggleShellScript = pkgs.writeShellScriptBin "toggle-shell" ''
+    STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$UID}/active_shell"
+    CURRENT="inir"
+    if [ -f "$STATE_FILE" ]; then
+      CURRENT=$(cat "$STATE_FILE")
+    fi
+
+    TARGET="$1"
+    if [ -z "$TARGET" ]; then
+      if [ "$CURRENT" = "inir" ]; then
+        TARGET="dms"
+      else
+        TARGET="inir"
+      fi
+    fi
+
+    case "$TARGET" in
+      dms)
+        echo "Switching to DankMaterialShell (DMS)..."
+        systemctl --user stop inir.service 2>/dev/null || true
+        pkill -f inir 2>/dev/null || true
+        pkill -f quickshell 2>/dev/null || true
+        sleep 0.2
+        ${dmsPackage}/bin/dms >/dev/null 2>&1 &
+        echo "dms" > "$STATE_FILE"
+        ;;
+      inir)
+        echo "Switching to iNiR..."
+        pkill -f quickshell 2>/dev/null || true
+        sleep 0.2
+        systemctl --user restart inir.service 2>/dev/null || inir >/dev/null 2>&1 &
+        echo "inir" > "$STATE_FILE"
+        ;;
+      *)
+        echo "Usage: toggle-shell [inir|dms]"
+        exit 1
+        ;;
+    esac
+  '';
+in {
+  home.packages = [
+    dmsPackage
+    toggleShellScript
+  ];
+
+  # Default initial startup on login: starts iNiR cleanly
+  systemd.user.services.inir-autostart = {
+    Unit = {
+      Description = "Auto-start default shell on Niri";
+      After = [ "niri.service" ];
+    };
+    Install = {
+      WantedBy = [ "niri.service" ];
+    };
+    Service = {
+      ExecStart = "${toggleShellScript}/bin/toggle-shell inir";
+      Restart = "on-failure";
+    };
+  };
+}
+
 ==> ./modules/home/compositor/swaync.nix <==
+#/home/alice/nixos-config/modules/home/compositor/swaync.nix
 {
   # pkgs,
   # theme,
@@ -976,7 +993,31 @@ in {
   };
 }
 
+==> ./modules/home/compositor/inir.nix <==
+#/home/alice/nixos-config/modules/home/compositor/inir.nix
+{
+  inputs,
+  pkgs,
+  ...
+}: {
+  imports = [
+    inputs.inir.homeModules.inir
+  ];
+
+  programs.inir = {
+    enable = true;
+    # Prevent automatic hard-start so switch-shell can manage toggling
+    service.compositor = null;
+    extraPackages = [
+      pkgs.niri
+      pkgs.easyeffects
+    ];
+    configSymlink.enable = true;
+  };
+}
+
 ==> ./modules/home/compositor/waybar.nix <==
+#/home/alice/nixos-config/modules/home/compositor/waybar.nix
 {
   #pkgs,
   theme,
@@ -1088,6 +1129,7 @@ in {
 }
 
 ==> ./modules/home/compositor/niri.nix <==
+#/home/alice/nixos-config/modules/home/compositor/niri.nix
 {
   pkgs,
   theme,
@@ -1107,6 +1149,7 @@ in {
   ];
 
   xdg.configFile."niri/config.kdl".text = ''
+
     input {
         keyboard {
             xkb {
@@ -1148,30 +1191,33 @@ in {
         }
     }
 
-    // Rules for Caelestia surfaces and dialogs
-    window-rule { geometry-corner-radius 16; clip-to-geometry true; }
-    window-rule { match app-id=r#"^quickshell.*"#; open-floating true; }
-    window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
-
-    layer-rule {
-        match namespace="^quickshell.*"
-    }
-
     // --- Autostart ---
-    spawn-at-startup "quickshell"
-    spawn-at-startup "bash" "/home/alice/nixos-config/scripts/niri-caelestia-bridge.sh"
-    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.jpg" "-m" "fill"
+    spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.png" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 
     // --- Keybindings ---
     binds {
+
+        // Instant Shell Switcher
+        Mod+Shift+T { spawn "toggle-shell"; }
+
+        // iNiR Native Controls
+        Mod+Space { spawn "inir" "overview" "toggle"; }
+        Mod+V { spawn "inir" "clipboard" "toggle"; }
+        Mod+Comma { spawn "inir" "settings"; }
+        Mod+Slash { spawn "inir" "cheatsheet" "toggle"; }
+        Mod+Shift+W { spawn "inir" "panelFamily" "cycle"; }
+        Mod+Shift+S { spawn "inir" "region" "screenshot"; }
+
+
         Mod+Return { spawn "ghostty"; }
         Mod+D      { spawn "fuzzel"; }
         Mod+Q      { close-window; }
 
         // Caelestia Shell Drawers
-        Mod+Space { spawn "quickshell" "ipc" "call" "launcher" "toggle"; }
-        Mod+N     { spawn "quickshell" "ipc" "call" "controlCenter" "toggle"; }
+        Mod+Space  { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "launcher"; }
+        Mod+N      { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "dashboard"; }
+        Mod+Escape { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "session"; }
 
         // Horizontal Column & Window Switching
         Mod+Tab       { focus-column-right; }
@@ -1187,6 +1233,33 @@ in {
         Mod+Shift+Up    { move-window-up; }
         Mod+Shift+Down  { move-window-down; }
 
+        // Workspaces (1 - 9)
+        Mod+1 { focus-workspace 1; }
+        Mod+2 { focus-workspace 2; }
+        Mod+3 { focus-workspace 3; }
+        Mod+4 { focus-workspace 4; }
+        Mod+5 { focus-workspace 5; }
+        Mod+6 { focus-workspace 6; }
+        Mod+7 { focus-workspace 7; }
+        Mod+8 { focus-workspace 8; }
+        Mod+9 { focus-workspace 9; }
+
+        Mod+Shift+1 { move-column-to-workspace 1; }
+        Mod+Shift+2 { move-column-to-workspace 2; }
+        Mod+Shift+3 { move-column-to-workspace 3; }
+        Mod+Shift+4 { move-column-to-workspace 4; }
+        Mod+Shift+5 { move-column-to-workspace 5; }
+        Mod+Shift+6 { move-column-to-workspace 6; }
+        Mod+Shift+7 { move-column-to-workspace 7; }
+        Mod+Shift+8 { move-column-to-workspace 8; }
+        Mod+Shift+9 { move-column-to-workspace 9; }
+
+        // Vertical Workspace Step & Dynamic Creation
+        Mod+Page_Down { focus-workspace-down; }
+        Mod+Page_Up   { focus-workspace-up; }
+        Mod+Shift+Page_Down { move-column-to-workspace-down; }
+        Mod+Shift+Page_Up   { move-column-to-workspace-up; }
+
         // Volume & Media Controls
         XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
         XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
@@ -1196,12 +1269,15 @@ in {
 
         Mod+Shift+Q { quit; }
         Print { spawn "sh" "-c" "grim -g \"$(slurp)\" - | wl-copy"; }
+
+        // Instead of fullscreen-window, maximize width & height within the viewport
+            Mod+F { maximize-column; }
+            Mod+Shift+F { fullscreen-window; }
     }
   '';
 
   # Theme and Style Fuzzel dynamically using Catppuccin / Material 3 Tokens
   xdg.configFile."fuzzel/fuzzel.ini".text = let
-    # Helper to convert "#RRGGBB" -> "RRGGBBAA"
     toRgba = hex: alpha: (builtins.substring 1 (builtins.stringLength hex - 1) hex) + alpha;
   in ''
     [main]
@@ -1225,7 +1301,6 @@ in {
     icon-theme=Papirus-Dark
 
     [colors]
-    # Format: RRGGBBAA
     background=${toRgba theme.bg "f2"}
     text=${toRgba theme.text "ff"}
     prompt=${toRgba theme.accent "ff"}
@@ -1233,12 +1308,10 @@ in {
     input=${toRgba theme.text "ff"}
     match=${toRgba theme.active "ff"}
 
-    # Selected Item Styling (Floating Pill)
     selection=${toRgba theme.surface "e6"}
     selection-text=${toRgba theme.accent "ff"}
     selection-match=${toRgba theme.urgent "ff"}
 
-    # Border & Counter
     border=${toRgba theme.border "ff"}
     counter=${toRgba theme.surface "ff"}
 
@@ -1256,6 +1329,7 @@ in {
 }
 
 ==> ./modules/anything_temp/usb.nix <==
+#/home/alice/nixos-config/modules/anything_temp/usb.nix
 {
   # config,
   pkgs,
@@ -1271,6 +1345,7 @@ in {
 }
 
 ==> ./modules/core/extra-config.nix <==
+#/home/alice/nixos-config/modules/core/extra-config.nix
 {
   # config,
   # pkgs,
@@ -1303,6 +1378,7 @@ in {
 }
 
 ==> ./modules/core/system_bootloader.nix <==
+#/home/alice/nixos-config/modules/core/system_bootloader.nix
 {
   # config,
   pkgs,
@@ -1362,6 +1438,7 @@ in {
 }
 
 ==> ./modules/core/aliases.nix <==
+#/home/alice/nixos-config/modules/core/aliases.nix
 {
   # config,
   # pkgs,
@@ -1421,6 +1498,7 @@ in {
 }
 
 ==> ./modules/core/system.nix <==
+#/home/alice/nixos-config/modules/core/system.nix
 {
   # config,
   # pkgs,
@@ -1457,6 +1535,7 @@ in {
 }
 
 ==> ./modules/core/flathub.nix <==
+#/home/alice/nixos-config/modules/core/flathub.nix
 {
   config,
   pkgs,
@@ -1490,6 +1569,7 @@ in {
 }
 
 ==> ./modules/core/users.nix <==
+#/home/alice/nixos-config/modules/core/users.nix
 {
   # config,
   # pkgs,
@@ -1528,6 +1608,7 @@ in {
 }
 
 ==> ./modules/core/services.nix <==
+#/home/alice/nixos-config/modules/core/services.nix
 {
   config,
   # pkgs,
@@ -1549,6 +1630,14 @@ in {
     services.dbus.enable = true;
     services.gnome.gnome-keyring.enable = true;
 
+    # Enable UPower for battery/power reporting
+    services.upower.enable = true;
+    services.power-profiles-daemon.enable = true;
+
+    # Enable BlueZ daemon so Quickshell DBus can inspect bluetooth devices
+    hardware.bluetooth.enable = true;
+    services.blueman.enable = true;
+
     # Enable SSH Support
     services.openssh.enable = true;
 
@@ -1568,6 +1657,7 @@ in {
 }
 
 ==> ./modules/core/networking.nix <==
+#/home/alice/nixos-config/modules/core/networking.nix
 {
   # config,
   # pkgs,
@@ -1594,6 +1684,7 @@ in {
 }
 
 ==> ./modules/core/vmware.nix <==
+#/home/alice/nixos-config/modules/core/vmware.nix
 {
   config,
   lib,
@@ -1614,6 +1705,7 @@ in {
 }
 
 ==> ./modules/core/blocklist.nix <==
+#/home/alice/nixos-config/modules/core/blocklist.nix
 {
   # config,
   # pkgs,
@@ -1639,7 +1731,11 @@ in {
 }
 
 ==> ./modules/core/niri.nix <==
-{pkgs, ...}: {
+#/home/alice/nixos-config/modules/core/niri.nix
+{
+  pkgs,
+  ...
+}: {
   # Enable Niri at the system level
   programs.niri.enable = true;
 
@@ -1663,6 +1759,7 @@ in {
 }
 
 ==> ./modules/apps/unstable-packages.nix <==
+#/home/alice/nixos-config/modules/apps/unstable-packages.nix
 {
   # config,
   # pkgs,
@@ -1685,6 +1782,7 @@ in {
 }
 
 ==> ./modules/apps/env-packages.nix <==
+#/home/alice/nixos-config/modules/apps/env-packages.nix
 {
   # config,
   pkgs,
@@ -1729,6 +1827,7 @@ in {
 }
 
 ==> ./modules/dev/winboat.nix <==
+#/home/alice/nixos-config/modules/dev/winboat.nix
 {
   pkgs,
   pkgs-unstable,
@@ -1750,6 +1849,7 @@ in {
 }
 
 ==> ./modules/dev/containers.nix <==
+#/home/alice/nixos-config/modules/dev/containers.nix
 {
   config,
   pkgs,
@@ -1809,6 +1909,7 @@ in {
 }
 
 ==> ./modules/dev/virtual-machines.nix <==
+#/home/alice/nixos-config/modules/dev/virtual-machines.nix
 {
   config,
   pkgs,
@@ -1862,6 +1963,7 @@ in {
 }
 
 ==> ./modules/dev/dev-tools.nix <==
+#/home/alice/nixos-config/modules/dev/dev-tools.nix
 {
   # config,
   pkgs,
