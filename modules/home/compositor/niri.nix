@@ -66,6 +66,19 @@
 
     // --- Keybindings ---
     binds {
+
+        // Instant Shell Switcher
+        Mod+Shift+T { spawn "toggle-shell"; }
+
+        // iNiR Native Controls
+        Mod+Space { spawn "inir" "overview" "toggle"; }
+        Mod+V { spawn "inir" "clipboard" "toggle"; }
+        Mod+Comma { spawn "inir" "settings"; }
+        Mod+Slash { spawn "inir" "cheatsheet" "toggle"; }
+        Mod+Shift+W { spawn "inir" "panelFamily" "cycle"; }
+        Mod+Shift+S { spawn "inir" "region" "screenshot"; }
+
+
         Mod+Return { spawn "ghostty"; }
         Mod+D      { spawn "fuzzel"; }
         Mod+Q      { close-window; }
