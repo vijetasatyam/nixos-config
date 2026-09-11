@@ -29,7 +29,7 @@
 
     # 6. DankMaterialShell (DMS)
     dms = {
-      url = "github:Aylur/dms";
+      url = "github:AvengeMedia/DankMaterialShell";
       flake = false;
     };
   };
