@@ -27,11 +27,11 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    # 6. DankMaterialShell (DMS) with git submodules enabled
-    dms = {
-      url = "git+https://github.com/AvengeMedia/DankMaterialShell?submodules=1";
-      flake = false;
-    };
+    # 6. DankMaterialShell (DMS)
+        dms = {
+          url = "git+https://github.com/AvengeMedia/DankMaterialShell?submodules=1";
+          inputs.nixpkgs.follows = "nixpkgs-unstable";
+        };
   };
 
   outputs = {
