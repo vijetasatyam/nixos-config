@@ -64,10 +64,10 @@ in {
   systemd.user.services.inir-autostart = {
     Unit = {
       Description = "Auto-start default shell on Niri";
-      After = [ "niri.service" ];
+      After = ["niri.service"];
     };
     Install = {
-      WantedBy = [ "niri.service" ];
+      WantedBy = ["niri.service"];
     };
     Service = {
       Type = "oneshot";
