@@ -10,9 +10,8 @@
 
   programs.inir = {
     enable = true;
-    # Keep compositor auto-start manual or set to "niri"
-    # To run iNiR as the primary active service on session start:
-    service.compositor = "niri";
+    # Prevent automatic hard-start so switch-shell can manage toggling
+    service.compositor = null;
     extraPackages = [
       pkgs.niri
       pkgs.easyeffects
