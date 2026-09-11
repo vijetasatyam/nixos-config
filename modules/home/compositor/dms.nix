@@ -4,8 +4,15 @@
   inputs,
   ...
 }: let
+  qsBin = "${inputs.quickshell.packages.${pkgs.system}.default}/bin/quickshell";
+
+  # DMS package wrapper: checks if entry is in root or in a quickshell/ subfolder
   dmsPackage = pkgs.writeShellScriptBin "dms" ''
-    exec ${inputs.quickshell.packages.${pkgs.system}.default}/bin/quickshell -p ${inputs.dms} "$@"
+    ENTRY="${inputs.dms}"
+    if [ -d "${inputs.dms}/quickshell" ]; then
+      ENTRY="${inputs.dms}/quickshell"
+    fi
+    exec ${qsBin} -p "$ENTRY" "$@"
   '';
 
   toggleShellScript = pkgs.writeShellScriptBin "toggle-shell" ''
@@ -24,24 +31,25 @@
       fi
     fi
 
-    # Fast-kill any running instances without waiting for timeout
+    # Kill running processes safely without killing this script
     kill_existing() {
-      pkill -9 -f "quickshell" 2>/dev/null || true
-      pkill -9 -f "inir" 2>/dev/null || true
       systemctl --user stop --no-block inir.service 2>/dev/null || true
-      sleep 0.05
+      pkill -9 -x "quickshell" 2>/dev/null || true
+      pkill -9 -f "/bin/inir" 2>/dev/null || true
+      pkill -9 -x "inir" 2>/dev/null || true
+      sleep 0.1
     }
 
     case "$TARGET" in
       dms)
         kill_existing
-        nohup ${dmsPackage}/bin/dms >/dev/null 2>&1 &
         echo "dms" > "$STATE_FILE"
+        nohup ${dmsPackage}/bin/dms > /tmp/dms.log 2>&1 &
         ;;
       inir)
         kill_existing
-        nohup inir >/dev/null 2>&1 &
         echo "inir" > "$STATE_FILE"
+        nohup inir > /tmp/inir.log 2>&1 &
         ;;
       *)
         echo "Usage: toggle-shell [inir|dms]"
@@ -51,18 +59,18 @@
   '';
 in {
   home.packages = [
+    inputs.quickshell.packages.${pkgs.system}.default
     dmsPackage
     toggleShellScript
   ];
 
-  # Default initial startup on login
   systemd.user.services.inir-autostart = {
     Unit = {
       Description = "Auto-start default shell on Niri";
-      After = ["niri.service"];
+      After = [ "niri.service" ];
     };
     Install = {
-      WantedBy = ["niri.service"];
+      WantedBy = [ "niri.service" ];
     };
     Service = {
       Type = "oneshot";
