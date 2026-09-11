@@ -16,6 +16,7 @@
     ./compositor/niri.nix
     ./compositor/inir.nix
     ./compositor/dms.nix
+    ./compositor/toggle-wc.nix
   ];
 
   # General User Packages
