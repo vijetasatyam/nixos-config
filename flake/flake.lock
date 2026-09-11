@@ -4,16 +4,18 @@
       "flake": false,
       "locked": {
         "lastModified": 1789103826,
-        "narHash": "sha256-pxU55fYodA3muXy/OaZDgfqnQ+eA32rDkiplqHRXKVw=",
-        "owner": "AvengeMedia",
-        "repo": "DankMaterialShell",
+        "narHash": "sha256-rHu5CfMkS8VEpfOyFU6FGSxJCc6Rt8DdF0ZsCqfzJss=",
+        "ref": "refs/heads/master",
         "rev": "b3e146b310fa39fc82928baa1df2171edc03bd24",
-        "type": "github"
+        "revCount": 4729,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/AvengeMedia/DankMaterialShell"
       },
       "original": {
-        "owner": "AvengeMedia",
-        "repo": "DankMaterialShell",
-        "type": "github"
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/AvengeMedia/DankMaterialShell"
       }
     },
     "home-manager": {
