@@ -16,6 +16,6 @@
       pkgs.niri
       pkgs.easyeffects
     ];
-    configSymlink.enable = true;
+    configSymlink.enable = false;
   };
 }
