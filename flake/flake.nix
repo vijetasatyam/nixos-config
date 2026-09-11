@@ -28,10 +28,10 @@
     };
 
     # 6. DankMaterialShell (DMS)
-        dms = {
-          url = "git+https://github.com/AvengeMedia/DankMaterialShell?submodules=1";
-          inputs.nixpkgs.follows = "nixpkgs-unstable";
-        };
+    dms = {
+      url = "git+https://github.com/AvengeMedia/DankMaterialShell?submodules=1";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = {
