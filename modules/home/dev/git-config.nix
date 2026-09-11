@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+#/home/alice/nixos-config/modules/home/dev/git-config.nix
+{
+  pkgs,
+  ...
+}: {
   home.packages = with pkgs; [
     git
     gnupg

@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/core/services.nix
 {
   config,
   # pkgs,

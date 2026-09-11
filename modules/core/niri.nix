@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+#/home/alice/nixos-config/modules/core/niri.nix
+{
+  pkgs,
+  ...
+}: {
   # Enable Niri at the system level
   programs.niri.enable = true;
 

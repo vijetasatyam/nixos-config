@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/home/compositor/swaync.nix
 {
   # pkgs,
   # theme,

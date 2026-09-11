@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/flake/flake.nix
 {
   description = "Alice's Modular Hybrid Config";
 

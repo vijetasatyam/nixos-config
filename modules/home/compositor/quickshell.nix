@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/home/compositor/quickshell.nix
 {
   pkgs,
   inputs,

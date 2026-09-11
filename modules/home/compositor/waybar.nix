@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/home/compositor/waybar.nix
 {
   #pkgs,
   theme,

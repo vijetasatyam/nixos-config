@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/core/vmware.nix
 {
   config,
   lib,

@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/apps/unstable-packages.nix
 {
   # config,
   # pkgs,

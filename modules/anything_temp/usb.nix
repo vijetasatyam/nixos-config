@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/anything_temp/usb.nix
 {
   # config,
   pkgs,

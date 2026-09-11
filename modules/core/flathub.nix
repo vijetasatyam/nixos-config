@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/core/flathub.nix
 {
   config,
   pkgs,

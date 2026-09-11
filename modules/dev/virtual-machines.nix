@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/dev/virtual-machines.nix
 {
   config,
   pkgs,

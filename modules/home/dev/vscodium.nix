@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/home/dev/vscodium.nix
 {
   config,
   pkgs,

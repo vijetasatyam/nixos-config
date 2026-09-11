@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/apps/env-packages.nix
 {
   # config,
   pkgs,

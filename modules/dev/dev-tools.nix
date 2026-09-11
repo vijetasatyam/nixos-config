@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/modules/dev/dev-tools.nix
 {
   # config,
   pkgs,
