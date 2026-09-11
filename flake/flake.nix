@@ -20,6 +20,18 @@
       url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    # 5. iNiR Shell (Native Niri Material Shell)
+    inir = {
+      url = "github:snowarch/inir";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    # 6. DankMaterialShell
+    dms = {
+      url = "github:Aven1us/dank-material-shell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = {
@@ -28,22 +40,21 @@
     nixpkgs-unstable,
     home-manager,
     quickshell,
+    inir,
+    dms,
     ...
   } @ inputs: let
     system = "x86_64-linux";
 
-    # 1. Define a shared config block
     shared-config = {
       allowUnfree = true;
     };
 
-    # 2. Apply it to the Unstable instance
     pkgs-unstable = import nixpkgs-unstable {
       inherit system;
       config = shared-config;
     };
 
-    # Catppuccin Mocha Tokens
     theme = {
       name = "catppuccin-mocha";
       bg = "#1e1e2e";
@@ -69,6 +80,9 @@
           ../hosts/sage/configuration.nix
 
           {nixpkgs.config = shared-config;}
+
+          # Include iNiR's NixOS module
+          inir.nixosModules.inir
 
           home-manager.nixosModules.home-manager
           {
