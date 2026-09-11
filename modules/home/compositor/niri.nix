@@ -17,10 +17,6 @@
   ];
 
   xdg.configFile."niri/config.kdl".text = ''
-    // --- Environment Variables for Caelestia Hyprland IPC Compatibility ---
-    environment {
-        HYPRLAND_INSTANCE_SIGNATURE "niri-fake-hypr"
-    }
 
     input {
         keyboard {
@@ -63,15 +59,7 @@
         }
     }
 
-    // Window rules for Caelestia surfaces and dialogs
-    window-rule { geometry-corner-radius 16; clip-to-geometry true; }
-    window-rule { match app-id=r#"^caelestia.*"#; open-floating true; }
-    window-rule { match app-id=r#"^quickshell.*"#; open-floating true; }
-    window-rule { match app-id="pavucontrol"; match app-id="mission-center"; open-floating true; }
-
     // --- Autostart ---
-    spawn-at-startup "python3" "/home/alice/nixos-config/scripts/niri-hypr-socket2.py"
-    spawn-at-startup "caelestia-shell"
     spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.png" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 
