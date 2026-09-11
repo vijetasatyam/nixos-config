@@ -1,8 +1,5 @@
 #/home/alice/nixos-config/modules/home/compositor/toggle-wc.nix
-{
-  pkgs,
-  ...
-}: let
+{pkgs, ...}: let
   toggleShellScript = pkgs.writeShellScriptBin "toggle-shell" ''
     STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$UID}/active_shell"
     CURRENT="inir"
