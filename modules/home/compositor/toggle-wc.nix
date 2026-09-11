@@ -1,5 +1,7 @@
-#/home/alice/nixos-config/modules/home/compositor/toggle-wc.nix
-{pkgs, ...}: let
+{
+  pkgs,
+  ...
+}: let
   toggleShellScript = pkgs.writeShellScriptBin "toggle-shell" ''
     STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$UID}/active_shell"
     CURRENT="inir"
@@ -16,14 +18,17 @@
       fi
     fi
 
-    # Kill running shells safely while explicitly exempting this script's PID
     kill_existing() {
       systemctl --user stop --no-block inir.service 2>/dev/null || true
 
-      # Kill any running quickshell instances
+      # Kill quickshell instances
       pkill -9 -x "quickshell" 2>/dev/null || true
 
-      # Kill running inir processes without matching this script's PID ($$) or parent ($PPID)
+      # Gracefully stop dms backend if running, then kill any lingering processes
+      dms kill 2>/dev/null || true
+      pkill -9 -x "dms" 2>/dev/null || true
+
+      # Kill inir processes without matching this script ($$) or parent ($PPID)
       for pid in $(pgrep -f "inir" 2>/dev/null); do
         if [ "$pid" != "$$" ] && [ "$pid" != "$PPID" ]; then
           kill -9 "$pid" 2>/dev/null || true
@@ -37,12 +42,12 @@
       dms)
         kill_existing
         echo "dms" > "$STATE_FILE"
-        nohup dms-shell > /tmp/dms.log 2>&1 &
+        nohup dms run > /tmp/dms.log 2>&1 &
         ;;
       inir)
         kill_existing
         echo "inir" > "$STATE_FILE"
-        nohup inir > /tmp/inir.log 2>&1 &
+        nohup inir run > /tmp/inir.log 2>&1 &
         ;;
       *)
         echo "Usage: toggle-shell [inir|dms]"
@@ -55,14 +60,13 @@ in {
     toggleShellScript
   ];
 
-  # Auto-start the default shell on Niri login
   systemd.user.services.inir-autostart = {
     Unit = {
       Description = "Auto-start default shell on Niri";
-      After = ["niri.service"];
+      After = [ "niri.service" ];
     };
     Install = {
-      WantedBy = ["niri.service"];
+      WantedBy = [ "niri.service" ];
     };
     Service = {
       Type = "oneshot";
