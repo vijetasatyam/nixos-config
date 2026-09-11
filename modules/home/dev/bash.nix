@@ -1,8 +1,5 @@
 #/home/alice/nixos-config/modules/home/dev/bash.nix
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   programs.bash = {
     enable = true;
     enableCompletion = true;

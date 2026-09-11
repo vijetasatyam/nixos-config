@@ -1,8 +1,5 @@
 #/home/alice/nixos-config/modules/home/dev/starship.nix
-{
-  lib,
-  ...
-}: {
+{lib, ...}: {
   programs.starship = {
     enable = true;
 

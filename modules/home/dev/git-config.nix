@@ -1,8 +1,5 @@
 #/home/alice/nixos-config/modules/home/dev/git-config.nix
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   home.packages = with pkgs; [
     git
     gnupg
