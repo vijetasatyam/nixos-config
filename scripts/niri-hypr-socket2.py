@@ -20,13 +20,24 @@ clients = set()
 clients_lock = threading.Lock()
 
 
-def setup_directories_and_links():
-    os.makedirs(RUNTIME_DIR, exist_ok=True)
-    os.makedirs(FALLBACK_DIR, exist_ok=True)
+def purge_and_prepare():
+    """Ensure clean directories and remove any stale socket files."""
+    for d in [RUNTIME_DIR, FALLBACK_DIR]:
+        os.makedirs(d, exist_ok=True)
+        for s in [".socket.sock", ".socket2.sock"]:
+            p = os.path.join(d, s)
+            if os.path.exists(p) or os.path.islink(p):
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
 
-    for sock in [".socket.sock", ".socket2.sock"]:
-        src = f"{RUNTIME_DIR}/{sock}"
-        dst = f"{FALLBACK_DIR}/{sock}"
+
+def mirror_links():
+    """Symlink the sockets from RUNTIME_DIR to FALLBACK_DIR for compatibility."""
+    for s in [".socket.sock", ".socket2.sock"]:
+        src = os.path.join(RUNTIME_DIR, s)
+        dst = os.path.join(FALLBACK_DIR, s)
         if os.path.islink(dst) or os.path.exists(dst):
             try:
                 os.unlink(dst)
@@ -83,7 +94,7 @@ def get_workspace_state():
 
 # --- Event Broadcaster (.socket2.sock) ---
 def event_server_worker():
-    if os.path.exists(EVENT_SOCK):
+    if os.path.exists(EVENT_SOCK) or os.path.islink(EVENT_SOCK):
         try:
             os.unlink(EVENT_SOCK)
         except OSError:
@@ -92,7 +103,7 @@ def event_server_worker():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(EVENT_SOCK)
     server.listen(16)
-    setup_directories_and_links()
+    mirror_links()
 
     while True:
         try:
@@ -172,7 +183,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                 resp = json.dumps(monitors_payload)
 
             elif "workspaces" in raw:
-                # Include active_idx and next adjacent workspace so Caelestia knows it can step
+                # Provide all active workspaces + active + adjacent next
                 all_ids = sorted(list(set(ws_indices + [active_idx, active_idx + 1])))
                 ws_payload = [
                     {
@@ -216,7 +227,7 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
             elif "dispatch workspace" in raw:
                 target = raw.split()[-1].strip()
 
-                # Up-scroll / previous workspace
+                # Up-scroll (Caelestia dispatches "workspace r-1")
                 if (
                     any(x in target for x in ["r-1", "e-1", "m-1", "prev"])
                     or target == "-1"
@@ -228,24 +239,23 @@ class HyprCmdHandler(socketserver.BaseRequestHandler):
                             ["niri", "msg", "action", "focus-workspace", "1"]
                         )
 
-                # Down-scroll / next workspace (dynamically create/step forward)
+                # Down-scroll (Caelestia dispatches "workspace r+1")
                 elif (
                     any(x in target for x in ["r+1", "e+1", "m+1", "next"])
                     or target == "+1"
                 ):
-                    # Explicitly focus next index so Niri allocates the new workspace
+                    # Focus the next numeric index to instantiate the workspace in Niri
                     next_ws = active_idx + 1
                     res = subprocess.run(
                         ["niri", "msg", "action", "focus-workspace", str(next_ws)],
                         capture_output=True,
                     )
                     if res.returncode != 0:
-                        # Fallback to action down
                         subprocess.run(
                             ["niri", "msg", "action", "focus-workspace-down"]
                         )
 
-                # Direct numeric workspace
+                # Numerical jump
                 else:
                     digits = re.findall(r"\d+", target)
                     if digits:
@@ -274,15 +284,14 @@ class ThreadedUnixStreamServer(
 
 
 def cmd_server_worker():
-    os.makedirs(RUNTIME_DIR, exist_ok=True)
-    if os.path.exists(CMD_SOCK):
+    if os.path.exists(CMD_SOCK) or os.path.islink(CMD_SOCK):
         try:
             os.unlink(CMD_SOCK)
         except OSError:
             pass
 
     server = ThreadedUnixStreamServer(CMD_SOCK, HyprCmdHandler)
-    setup_directories_and_links()
+    mirror_links()
     server.serve_forever()
 
 
@@ -331,7 +340,7 @@ def niri_event_worker():
 
 
 def main():
-    setup_directories_and_links()
+    purge_and_prepare()
     threading.Thread(target=event_server_worker, daemon=True).start()
     threading.Thread(target=cmd_server_worker, daemon=True).start()
     niri_event_worker()
