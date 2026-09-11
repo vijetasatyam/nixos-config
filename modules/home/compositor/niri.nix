@@ -78,15 +78,9 @@
         Mod+Shift+W { spawn "inir" "panelFamily" "cycle"; }
         Mod+Shift+S { spawn "inir" "region" "screenshot"; }
 
-
         Mod+Return { spawn "ghostty"; }
         Mod+D      { spawn "fuzzel"; }
         Mod+Q      { close-window; }
-
-        // Caelestia Shell Drawers
-        Mod+Space  { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "launcher"; }
-        Mod+N      { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "dashboard"; }
-        Mod+Escape { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "session"; }
 
         // Horizontal Column & Window Switching
         Mod+Tab       { focus-column-right; }
