@@ -18,6 +18,8 @@
     htop
     kdePackages.dolphin
     kdePackages.ark
+    nautilus
+    gnome-roller
     p7zip
     unzip
     zip
