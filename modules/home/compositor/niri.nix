@@ -33,7 +33,6 @@
   '';
 in {
   home.packages = with pkgs; [
-    fuzzel
     fuzzelKeybinds
     papirus-icon-theme
     swaybg
