@@ -49,13 +49,13 @@
 
     # Open CUPS browsing port in the firewall
     networking.firewall = {
-      allowedUDPPorts = [ 631 ];
+      allowedUDPPorts = [631];
     };
 
     # (Optional) Scanning support via SANE for the L3150 flatbed scanner
     hardware.sane = {
       enable = true;
-      extraBackends = [ pkgs.utsushi ]; # Epson Image Scan v3 backend
+      extraBackends = [pkgs.utsushi]; # Epson Image Scan v3 backend
     };
 
     # Enable sound with pipewire
