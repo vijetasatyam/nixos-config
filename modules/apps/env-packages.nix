@@ -17,8 +17,10 @@
     btop
     htop
     kdePackages.dolphin
-    zip
     unzip
+    zip
+    p7zip
+    gnutar
 
     # nix versioning tools
     nvd
