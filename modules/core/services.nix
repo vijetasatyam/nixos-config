@@ -28,6 +28,10 @@
     hardware.bluetooth.enable = true;
     services.blueman.enable = true;
 
+    # Install brightnessctl and grant non-root video group access
+    environment.systemPackages = [pkgs.brightnessctl];
+    services.udev.packages = [pkgs.brightnessctl];
+
     # Enable SSH Support
     services.openssh.enable = true;
 
