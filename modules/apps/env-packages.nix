@@ -31,6 +31,7 @@
     zstd
     vlc
     photoqt
+    swww
 
     # nix versioning tools
     nvd
