@@ -156,6 +156,10 @@ in {
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
     spawn-at-startup "awww-daemon"
 
+    hotkey-overlay {
+            skip-at-startup
+        }
+
     // --- Keybindings ---
     binds {
       // Interactive searchable hotkey menu
