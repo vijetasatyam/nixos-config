@@ -37,7 +37,6 @@ in {
   ];
   home.packages = with pkgs; [
     fuzzelKeybinds
-    papirus-icon-theme
     swaybg
     grim
     slurp
@@ -46,35 +45,66 @@ in {
     nwg-look
     mission-center
     htop
+    # Core icon themes (Papirus inherits from hicolor and adwaita)
+    papirus-icon-theme
+    hicolor-icon-theme
+    adwaita-icon-theme
+
+    # Essential Qt plugins for SVG rendering in Quickshell/DMS
+    kdePackages.qtsvg # Qt 6 SVG rendering support
+    libsForQt5.qtsvg # Qt 5 fallback if any DMS component links Qt 5
+    kdePackages.kiconthemes # Qt icon loader backend
   ];
 
   gtk = {
     enable = true;
+    iconTheme = {
+      name = "Papirus-Dark";
+      package = pkgs.papirus-icon-theme;
+    };
     gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
     gtk4.extraConfig.gtk-application-prefer-dark-theme = 1;
   };
 
-  xdg.configFile."gtk-4.0/gtk.css".text = ''
-    /* Style Niri's Hotkey Dialog */
-    window.dialog, dialog {
-      background-color: ${theme.bg};
-      color: ${theme.text};
-      border: 2px solid ${theme.border};
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
+  # Qt theming integration
+  qt = {
+    enable = true;
+    platformTheme.name = "gtk3"; # or "adwaita" / "gnome"
+    style.name = "adwaita-dark";
+  };
 
-    list, row {
-      background-color: transparent;
-      color: ${theme.text};
-      border-radius: 8px;
-      padding: 4px 8px;
-    }
+  # Force dconf icon setting for apps and shell daemons
+  dconf.settings = {
+    "org/gnome/desktop/interface" = {
+      icon-theme = "Papirus-Dark";
+      color-scheme = "prefer-dark";
+    };
+  };
 
-    row:hover {
-      background-color: ${theme.surface};
-    }
-  '';
+  xdg.configFile."gtk-4.0/gtk.css" = {
+    text = ''
+      /* Style Niri's Hotkey Dialog */
+      window.dialog, dialog {
+        background-color: ${theme.bg};
+        color: ${theme.text};
+        border: 2px solid ${theme.border};
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      list, row {
+        background-color: transparent;
+        color: ${theme.text};
+        border-radius: 8px;
+        padding: 4px 8px;
+      }
+
+      row:hover {
+        background-color: ${theme.surface};
+      }
+    '';
+    force = true;
+  };
 
   xdg.configFile."niri/config.kdl".text = ''
     input {
@@ -119,6 +149,10 @@ in {
     }
 
     // --- Autostart ---
+    // Import environment into systemd/dbus so DMS sees icon paths and Wayland sockets
+        spawn-at-startup "systemctl" "--user" "import-environment" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_DATA_DIRS" "PATH"
+        spawn-at-startup "dbus-update-activation-environment" "--all"
+
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
     spawn-at-startup "awww-daemon"
 

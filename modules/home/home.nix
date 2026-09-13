@@ -30,6 +30,7 @@
   # Required for `nh` to work without specifying path every time
   home.sessionVariables = {
     NH_FLAKE = "/home/alice/nixos-config";
+    XDG_DATA_DIRS = "$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:/run/current-system/sw/share:$XDG_DATA_DIRS";
   };
 
   home.stateVersion = "26.05";
