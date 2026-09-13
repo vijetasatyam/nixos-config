@@ -63,9 +63,9 @@
     // --- Autostart ---
     //spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.png" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
-    // --- Autostart swww daemon ---
-        spawn-at-startup "swww-daemon"
-        spawn-at-startup "swww" "img" "/home/alice/Downloads/walls-main/animated/city.gif"
+    // --- Autostart awww daemon ---
+        spawn-at-startup "awww-daemon"
+        spawn-at-startup "awww" "img" "/home/alice/Downloads/walls-main/animated/city.gif"
 
     // --- Keybindings ---
     binds {
