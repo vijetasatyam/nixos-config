@@ -29,6 +29,8 @@
     bzip2
     gzip
     zstd
+    vlc
+    photoqt
 
     # nix versioning tools
     nvd
