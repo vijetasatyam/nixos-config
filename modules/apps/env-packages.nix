@@ -19,7 +19,7 @@
     kdePackages.dolphin
     kdePackages.ark
     nautilus
-    gnome-roller
+    file-roller
     p7zip
     unzip
     zip
