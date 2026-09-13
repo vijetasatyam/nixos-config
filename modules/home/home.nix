@@ -14,9 +14,6 @@
     ./dev/git-config.nix
     ./dev/terminal.nix
     ./compositor/niri.nix
-    ./compositor/inir.nix
-    ./compositor/dms.nix
-    ./compositor/toggle-wc.nix
   ];
 
   # General User Packages

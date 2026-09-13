@@ -20,18 +20,6 @@
       url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
-
-    # 5. iNiR (Native Niri Material Shell)
-    inir = {
-      url = "github:snowarch/inir";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
-
-    # 6. DankMaterialShell (DMS)
-    dms = {
-      url = "git+https://github.com/AvengeMedia/DankMaterialShell?submodules=1";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
   };
 
   outputs = {
@@ -40,8 +28,6 @@
     nixpkgs-unstable,
     home-manager,
     quickshell,
-    inir,
-    dms,
     ...
   } @ inputs: let
     system = "x86_64-linux";

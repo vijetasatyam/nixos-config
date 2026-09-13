@@ -1,3 +1,4 @@
+#/home/alice/nixos-config/hosts/sage/configuration.nix
 {
   # config,
   # pkgs,
@@ -31,6 +32,9 @@
     ../../modules/dev/virtual-machines.nix
     # ../../modules/dev/winboat.nix
     ../../modules/anything_temp/usb.nix
+
+    # ___ THEMES ___
+    ../../modules/themes/dms.nix
   ];
 
   # # Enable VMware Guest modules if needed
