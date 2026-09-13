@@ -32,6 +32,10 @@
     fi
   '';
 in {
+
+  imports = [
+    ./fuzzel.nix
+  ];
   home.packages = with pkgs; [
     fuzzelKeybinds
     papirus-icon-theme
