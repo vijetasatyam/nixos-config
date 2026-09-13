@@ -6,11 +6,9 @@
   # Polkit is required for privilege escalation in Wayland (e.g., GUI sudo)
   security.polkit.enable = true;
 
-
   environment.systemPackages = [
     pkgs.nirius
   ];
-
 
   # Use greetd as a lightweight Display Manager
   services.greetd = {
