@@ -64,13 +64,13 @@
     //spawn-at-startup "swaybg" "-i" "/home/alice/Pictures/catppuccin-wallpaper.png" "-m" "fill"
     spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
     // --- Autostart awww daemon ---
-    spawn-at-startup "awww-daemon"
-    spawn-at-startup "awww" "img" "/home/alice/Downloads/walls-main/animated/city.gif"
+    spawn-at-startup "sh" "-c" "mkdir -p ~/.cache/awww && awww-daemon & sleep 0.4 && awww img /home/alice/Downloads/walls-main/animated/city.gif"
 
     // --- Keybindings ---
     binds {
       // Quick service restart keybinding
       Mod+Shift+R { spawn "systemctl" "--user" "restart" "dms"; }
+      Mod+Shift+W { spawn "awww" "img" "/home/alice/Downloads/walls-main/animated/city.gif"; }
 
       Mod+Return { spawn "ghostty"; }
       Mod+D      { spawn "fuzzel"; }
