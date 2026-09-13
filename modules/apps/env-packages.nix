@@ -17,10 +17,16 @@
     btop
     htop
     kdePackages.dolphin
+    kdePackages.ark
+    p7zip
     unzip
     zip
-    p7zip
+    unrar
     gnutar
+    xz
+    bzip2
+    gzip
+    zstd
 
     # nix versioning tools
     nvd
