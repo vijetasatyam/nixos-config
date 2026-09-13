@@ -30,7 +30,7 @@ fi
 
 # --- 1. Building (Flake) ---
 echo -e "${CYAN}⚙️ Building new generation for 'sage'...${NC}"
-# nh os build automatically uses nom for a beautiful progress UI
+# nh os build automatically uses nom for a clean progress UI
 if ! nh os build "$FLAKE_DIR" --hostname sage; then
     echo -e "${RED}❌ Build Failed! Check the output above.${NC}"
     exit 1
@@ -91,11 +91,19 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                 if git commit --quiet -S -m "$commit_msg"; then
                     echo -e "${GREEN}✔ Committed: \"$commit_msg\"${NC}"
 
-                    # 6. Gate 3: Push
-                    echo -e "${CYAN}📡 Checking remotes...${NC}"
-                    git fetch --quiet github main &
-                    git fetch --quiet codeberg main &
-                    wait
+                    # 6. Gate 3: Fast Remote Sync
+                    echo -e "${CYAN}📡 Checking remotes (fast parallel check)...${NC}"
+
+                    # Strict 3-second timeout flags to eliminate hanging
+                    GIT_NET_OPTS="-c net.gitConnectionTimeout=3 -c net.http.lowSpeedLimit=1000 -c net.http.lowSpeedTime=3"
+
+                    git $GIT_NET_OPTS fetch --quiet --no-tags github main 2>/dev/null &
+                    PID_GH=$!
+                    git $GIT_NET_OPTS fetch --quiet --no-tags codeberg main 2>/dev/null &
+                    PID_CB=$!
+
+                    wait $PID_GH 2>/dev/null || true
+                    wait $PID_CB 2>/dev/null || true
 
                     AHEAD_GITHUB=$(git rev-list --count github/main..HEAD 2>/dev/null || echo 0)
                     AHEAD_CODEBERG=$(git rev-list --count codeberg/main..HEAD 2>/dev/null || echo 0)
@@ -107,8 +115,14 @@ if [[ $confirm =~ ^[Yy]$ || $confirm == [yY][eE][sS] || -z $confirm ]]; then
                         read -p "🌍 Push to Remotes? [y/N] " push_confirm
 
                         if [[ $push_confirm =~ ^[Yy]$ || $push_confirm == [yY][eE][sS] ]]; then
-                            echo -e "${CYAN}🔄 Syncing to Github & Codeberg...${NC}"
-                            git push --quiet github main && git push --quiet codeberg main
+                            echo -e "${CYAN}🔄 Syncing to Github & Codeberg in parallel...${NC}"
+
+                            git push --quiet github main &
+                            PUSH_PID_GH=$!
+                            git push --quiet codeberg main &
+                            PUSH_PID_CB=$!
+
+                            wait $PUSH_PID_GH && wait $PUSH_PID_CB
                             echo -e "${GREEN}✅ Remotes updated.${NC}"
                         else
                             echo -e "${YELLOW}⏭️ Push skipped.${NC}"
