@@ -7,32 +7,31 @@
   toRgba = hex: alpha: (builtins.substring 1 (builtins.stringLength hex - 1) hex) + alpha;
 
   fuzzelKeybinds = pkgs.writeShellScriptBin "fuzzel-keybinds" ''
-    # Format: "Keybind | Description | Command"
-    MENU="󰞷  Mod + Return       Launch Ghostty Terminal      ::: ghostty
-󰍉  Mod + F            Application Launcher (Fuzzel) ::: fuzzel
-󰅖  Mod + Q            Close Active Window          ::: niri msg action close-window
-󰍉  Mod + D            Maximize Column              ::: niri msg action maximize-column
-󰊓  Mod + Shift + D    Fullscreen Window            ::: niri msg action fullscreen-window
-󰄄  Print              Snip Screenshot to Clipboard ::: grim -g \"\$(slurp)\" - | wl-copy
-󰑓  Mod + Shift + R    Restart DMS Shell            ::: systemctl --user restart dms
-󰗼  Mod + Shift + Q    Exit Niri Session            ::: niri msg action quit --skip-confirmation
-󰕾  Volume Up          Increase Volume 5%           ::: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
-󰝟  Volume Down        Decrease Volume 5%           ::: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-󰝟  Volume Mute        Toggle Mute Audio            ::: wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-󰃠  Brightness Up      Increase Display +5%         ::: brightnessctl set +5%
-󰃟  Brightness Down    Decrease Display -5%         ::: brightnessctl set 5%-"
+        # Format: "Keybind | Description | Command"
+        MENU="󰞷  Mod + Return       Launch Ghostty Terminal      ::: ghostty
+    󰍉  Mod + F            Application Launcher (Fuzzel) ::: fuzzel
+    󰅖  Mod + Q            Close Active Window          ::: niri msg action close-window
+    󰍉  Mod + D            Maximize Column              ::: niri msg action maximize-column
+    󰊓  Mod + Shift + D    Fullscreen Window            ::: niri msg action fullscreen-window
+    󰄄  Print              Snip Screenshot to Clipboard ::: grim -g \"\$(slurp)\" - | wl-copy
+    󰑓  Mod + Shift + R    Restart DMS Shell            ::: systemctl --user restart dms
+    󰗼  Mod + Shift + Q    Exit Niri Session            ::: niri msg action quit --skip-confirmation
+    󰕾  Volume Up          Increase Volume 5%           ::: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+    󰝟  Volume Down        Decrease Volume 5%           ::: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+    󰝟  Volume Mute        Toggle Mute Audio            ::: wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+    󰃠  Brightness Up      Increase Display +5%         ::: brightnessctl set +5%
+    󰃟  Brightness Down    Decrease Display -5%         ::: brightnessctl set 5%-"
 
-    CHOICE=$(echo "$MENU" | awk -F' ::: ' '{print $1}' | fuzzel --dmenu --prompt="  󰌌  Keybinds: " --lines=13 --width=50)
+        CHOICE=$(echo "$MENU" | awk -F' ::: ' '{print $1}' | fuzzel --dmenu --prompt="  󰌌  Keybinds: " --lines=13 --width=50)
 
-    if [ -n "$CHOICE" ]; then
-      CMD=$(echo "$MENU" | grep -F "$CHOICE" | awk -F' ::: ' '{print $2}')
-      if [ -n "$CMD" ]; then
-        eval "$CMD"
-      fi
-    fi
+        if [ -n "$CHOICE" ]; then
+          CMD=$(echo "$MENU" | grep -F "$CHOICE" | awk -F' ::: ' '{print $2}')
+          if [ -n "$CMD" ]; then
+            eval "$CMD"
+          fi
+        fi
   '';
 in {
-
   imports = [
     ./fuzzel.nix
   ];
