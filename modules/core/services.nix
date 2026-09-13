@@ -36,6 +36,7 @@
       enable = true;
       drivers = with pkgs; [
         epson-escpr # Epson Inkjet Printer Driver (ESC/P-R) covers L3150
+        epsonscan2
       ];
     };
 
