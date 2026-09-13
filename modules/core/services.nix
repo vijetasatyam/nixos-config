@@ -1,7 +1,7 @@
 #/home/alice/nixos-config/modules/core/services.nix
 {
   config,
-  # pkgs,
+  pkgs,
   lib,
   ...
 }: {
@@ -31,8 +31,31 @@
     # Enable SSH Support
     services.openssh.enable = true;
 
-    # Enable CUPS to print documents
-    services.printing.enable = true;
+    # --- CUPS Printing Configuration ---
+    services.printing = {
+      enable = true;
+      drivers = with pkgs; [
+        epson-escpr # Epson Inkjet Printer Driver (ESC/P-R) covers L3150
+      ];
+    };
+
+    # mDNS/DNS-SD for network printer auto-discovery
+    services.avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
+
+    # Open CUPS browsing port in the firewall
+    networking.firewall = {
+      allowedUDPPorts = [ 631 ];
+    };
+
+    # (Optional) Scanning support via SANE for the L3150 flatbed scanner
+    hardware.sane = {
+      enable = true;
+      extraBackends = [ pkgs.utsushi ]; # Epson Image Scan v3 backend
+    };
 
     # Enable sound with pipewire
     services.pulseaudio.enable = false;
